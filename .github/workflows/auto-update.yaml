@@ -1,4 +1,4 @@
-name: Update README with Data Files
+name: Update README with Upstream
 
 on:
   workflow_dispatch:
@@ -32,6 +32,11 @@ jobs:
     - name: Update README
       run: |
         cat README_template.md data_files.md > README.md
+
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "actions@github.com"
 
     - name: Commit and push if necessary
       run: |
