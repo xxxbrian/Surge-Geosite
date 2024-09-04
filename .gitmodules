@@ -1,0 +1,3 @@
+[submodule "upstream"]
+	path = upstream
+	url = git@github.com:v2fly/domain-list-community.git
