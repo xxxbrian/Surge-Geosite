@@ -18,7 +18,7 @@ jobs:
     - name: Update submodules
       run: |
         git submodule update --init --recursive
-        git submodule foreach git pull origin main
+        git submodule foreach git pull origin master
 
     - name: Generate file table for README
       run: |
