@@ -29,6 +29,16 @@ jobs:
           echo "| $filename | https://rulelist.bojin.co/geosite/$filename |" >> data_files.md
         done
 
+    - name: Generate Index Json
+      run: |
+        echo "{" > index.json
+        for file in upstream/data/*; do
+          filename=$(basename $file)
+          echo "\"$filename\": \"https://rulelist.bojin.co/geosite/$filename\"," >> index.json
+        done
+        sed -i '$ s/,$//' index.json
+        echo "}" >> index.json
+
     - name: Update README
       run: |
         cat README_template.md data_files.md > README.md
@@ -42,6 +52,7 @@ jobs:
       run: |
         set -e  # Ensure that the script stops on error
         git add README.md
+        git add index.json
         # Check if there are changes to be committed
         if ! git diff --staged --quiet; then
           git commit -m "[auto] Sync with upstream"
