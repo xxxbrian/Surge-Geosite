@@ -31,14 +31,16 @@ jobs:
 
     - name: Update README
       run: |
-        cat README.md data_files.md > temp_README.md
-        mv temp_README.md README.md
+        cat README_template.md data_files.md > README.md
 
     - name: Commit and push if necessary
       run: |
+        set -e  # Ensure that the script stops on error
         git add README.md
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
+        # Check if there are changes to be committed
+        if ! git diff --staged --quiet; then
           git commit -m "[auto] Sync with upstream"
           git push
+        else
+          echo "No changes to commit"
+        fi
