@@ -1,0 +1,44 @@
+name: Update README with Data Files
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Update submodules
+      run: |
+        git submodule update --init --recursive
+        git submodule foreach git pull origin main
+
+    - name: Generate file table for README
+      run: |
+        echo "| Name | Link |" > data_files.md
+        echo "|------|------|" >> data_files.md
+        for file in upstream/data/*; do
+          filename=$(basename $file)
+          echo "| $filename | https://rulelist.bojin.co/geosite/$filename |" >> data_files.md
+        done
+
+    - name: Update README
+      run: |
+        cat README.md data_files.md > temp_README.md
+        mv temp_README.md README.md
+
+    - name: Commit and push if necessary
+      run: |
+        git add README.md
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "[auto] Sync with upstream"
+          git push
