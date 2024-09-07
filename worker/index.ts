@@ -3,6 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import { logger } from "hono/logger";
 import { cache } from "hono/cache";
 
+import { regexAstToWildcard } from "./wildcard";
+
 const app = new Hono();
 app.use(logger());
 
@@ -33,8 +35,10 @@ const genSurgeList = async (
   const convertedLines = await Promise.all(
     lines.map(async (line) => {
       line = line.trim();
-      const convert = (from: string, to: string) => {
-        const line_chunks = line.split(" ");
+      const convert = (from: string, to: string, specifyLine?: string) => {
+        const line_chunks = specifyLine
+          ? specifyLine.split(" ")
+          : line.split(" ");
         const rest = line_chunks.slice(1).join(" ");
         if (filter) {
           const trimmedRest = rest.trim();
@@ -72,7 +76,12 @@ const genSurgeList = async (
         return convert("keyword:", "DOMAIN-KEYWORD,");
       }
       if (line.startsWith("regexp:")) {
-        return convert("regexp:", "DOMAIN-KEYWORD,");
+        const regexp = line.split(" ")[0].replace("regexp:", "");
+        return convert(
+          "regexp:",
+          "DOMAIN-WILDCARD,",
+          line.replace(regexp, regexAstToWildcard(regexp))
+        );
       }
       if (line.startsWith("include:")) {
         const subContentName = line.split(" ")[0].replace("include:", "");
