@@ -26,7 +26,7 @@ jobs:
         echo "|------|------|" >> data_files.md
         for file in upstream/data/*; do
           filename=$(basename $file)
-          echo "| $filename | https://rulelist.bojin.co/geosite/$filename |" >> data_files.md
+          echo "| $filename | https://surge.bojin.co/geosite/$filename |" >> data_files.md
         done
 
     - name: Generate Index Json
@@ -34,7 +34,7 @@ jobs:
         echo "{" > index.json
         for file in upstream/data/*; do
           filename=$(basename $file)
-          echo "\"$filename\": \"https://rulelist.bojin.co/geosite/$filename\"," >> index.json
+          echo "\"$filename\": \"https://surge.bojin.co/geosite/$filename\"," >> index.json
         done
         sed -i '$ s/,$//' index.json
         echo "}" >> index.json

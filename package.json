@@ -1,5 +1,5 @@
 {
-  "name": "rulelist",
+  "name": "surge",
   "scripts": {
     "dev": "wrangler dev worker/index.ts",
     "deploy": "wrangler deploy --minify worker/index.ts"
