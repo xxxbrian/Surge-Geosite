@@ -16,3 +16,5 @@ This conversion ensures real-time updates and compatibility with Surge configura
 
 **Geosite Ruleset Index**
 
+* JSON Format: `https://surge.bojin.co/geosite`
+

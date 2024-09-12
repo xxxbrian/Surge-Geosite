@@ -87,7 +87,9 @@ const genSurgeList = async (
         const subContentName = line.split(" ")[0].replace("include:", "");
         const subUpstreamContent = await getUpstream(subContentName).catch(
           (err) => {
-            throw new HTTPException(500, err.message);
+            throw new Error(
+              `Failed to fetch sub-upstream content: ${err.message}`
+            );
           }
         );
         const subSurgeList = await genSurgeList(subUpstreamContent, filter);
@@ -108,12 +110,31 @@ app.get("/geosite/:name_with_filter", async (c) => {
 
   // const type = c.req.query("type") || "surge";
   const upstreamContent = await getUpstream(name).catch((err) => {
-    throw new HTTPException(500, err.message);
+    throw new HTTPException(500, { message: `Failed to fetch upstream content: ${err.message}` });
   });
   const surgeList = await genSurgeList(upstreamContent, filter).catch((err) => {
-    throw new HTTPException(500, err.message);
+    throw new HTTPException(500, { message: `Failed to generate Surge list: ${err.message}` });
   });
   return c.text(surgeList);
+});
+
+app.get("/geosite", async (c) => {
+  const githubRaw = await fetch(
+    "https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/main/index.json"
+  ).then((res) => {
+    if (res.ok) {
+      return res.json() as Promise<Record<string, string>>;
+    }
+    throw new HTTPException(500, { message: `Failed to fetch content from GitHub: ${res.status} ${res.statusText}` });
+  }).catch((err) => {
+    throw new HTTPException(500, { message: `Failed to fetch content from GitHub: ${err.message}` });
+  });
+  return c.json(githubRaw);
+});
+
+app.get("/", async (c) => {
+  // redirect to the GitHub repository
+  return c.redirect("https://github.com/xxxbrian/Surge-Geosite");
 });
 
 export default app;
