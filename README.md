@@ -334,6 +334,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | collabora | https://surge.bojin.co/geosite/collabora |
 | colorfulclouds | https://surge.bojin.co/geosite/colorfulclouds |
 | comodo | https://surge.bojin.co/geosite/comodo |
+| connectivity-check | https://surge.bojin.co/geosite/connectivity-check |
 | contentful | https://surge.bojin.co/geosite/contentful |
 | coolapk | https://surge.bojin.co/geosite/coolapk |
 | corel | https://surge.bojin.co/geosite/corel |
@@ -521,6 +522,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | google-ads | https://surge.bojin.co/geosite/google-ads |
 | google-deepmind | https://surge.bojin.co/geosite/google-deepmind |
 | google-gemini | https://surge.bojin.co/geosite/google-gemini |
+| google-play | https://surge.bojin.co/geosite/google-play |
 | google-registry | https://surge.bojin.co/geosite/google-registry |
 | google-registry-tld | https://surge.bojin.co/geosite/google-registry-tld |
 | google-scholar | https://surge.bojin.co/geosite/google-scholar |
@@ -530,6 +532,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | gracg | https://surge.bojin.co/geosite/gracg |
 | gravatar | https://surge.bojin.co/geosite/gravatar |
 | greatfire | https://surge.bojin.co/geosite/greatfire |
+| gree | https://surge.bojin.co/geosite/gree |
 | growingio-ads | https://surge.bojin.co/geosite/growingio-ads |
 | gucci | https://surge.bojin.co/geosite/gucci |
 | guo | https://surge.bojin.co/geosite/guo |
@@ -767,6 +770,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | microsoft | https://surge.bojin.co/geosite/microsoft |
 | microsoft-dev | https://surge.bojin.co/geosite/microsoft-dev |
 | microsoft-pki | https://surge.bojin.co/geosite/microsoft-pki |
+| midea | https://surge.bojin.co/geosite/midea |
 | mihoyo | https://surge.bojin.co/geosite/mihoyo |
 | mihoyo-cn | https://surge.bojin.co/geosite/mihoyo-cn |
 | mikrotik | https://surge.bojin.co/geosite/mikrotik |
@@ -1216,6 +1220,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wangsu | https://surge.bojin.co/geosite/wangsu |
 | wantmedia | https://surge.bojin.co/geosite/wantmedia |
 | watchout | https://surge.bojin.co/geosite/watchout |
+| weathercn | https://surge.bojin.co/geosite/weathercn |
 | webex | https://surge.bojin.co/geosite/webex |
 | webflow | https://surge.bojin.co/geosite/webflow |
 | webnovel | https://surge.bojin.co/geosite/webnovel |
