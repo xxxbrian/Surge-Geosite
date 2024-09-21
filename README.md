@@ -214,6 +214,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-bank-cn | https://surge.bojin.co/geosite/category-bank-cn |
 | category-bank-ir | https://surge.bojin.co/geosite/category-bank-ir |
 | category-bank-jp | https://surge.bojin.co/geosite/category-bank-jp |
+| category-bank-mm | https://surge.bojin.co/geosite/category-bank-mm |
 | category-blog-cn | https://surge.bojin.co/geosite/category-blog-cn |
 | category-bourse-ir | https://surge.bojin.co/geosite/category-bourse-ir |
 | category-browser-!cn | https://surge.bojin.co/geosite/category-browser-!cn |
@@ -268,6 +269,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-scholar-!cn | https://surge.bojin.co/geosite/category-scholar-!cn |
 | category-scholar-cn | https://surge.bojin.co/geosite/category-scholar-cn |
 | category-scholar-ir | https://surge.bojin.co/geosite/category-scholar-ir |
+| category-scholar-uk | https://surge.bojin.co/geosite/category-scholar-uk |
 | category-securities-cn | https://surge.bojin.co/geosite/category-securities-cn |
 | category-shopping-ir | https://surge.bojin.co/geosite/category-shopping-ir |
 | category-social-media-!cn | https://surge.bojin.co/geosite/category-social-media-!cn |
