@@ -1174,6 +1174,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | u17 | https://surge.bojin.co/geosite/u17 |
 | uber | https://surge.bojin.co/geosite/uber |
 | uberads-ads | https://surge.bojin.co/geosite/uberads-ads |
+| ubiquiti | https://surge.bojin.co/geosite/ubiquiti |
 | ubisoft | https://surge.bojin.co/geosite/ubisoft |
 | ubuntu | https://surge.bojin.co/geosite/ubuntu |
 | ubuntukylin | https://surge.bojin.co/geosite/ubuntukylin |
