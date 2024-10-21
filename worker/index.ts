@@ -147,4 +147,24 @@ app.get("/", async (c) => {
   return c.redirect("https://github.com/xxxbrian/Surge-Geosite");
 });
 
+app.get("/misc/wechat-dns", async (c) => {
+  const githubRaw = await fetch(
+    "https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat-dns/wechat-dns.list"
+  )
+    .then((res) => {
+      if (res.ok) {
+        return res.text();
+      }
+      throw new HTTPException(500, {
+        message: `Failed to fetch content from GitHub: ${res.status} ${res.statusText}`,
+      });
+    })
+    .catch((err) => {
+      throw new HTTPException(500, {
+        message: `Failed to fetch content from GitHub: ${err.message}`,
+      });
+    });
+  return c.text(githubRaw);
+});
+
 export default app;
