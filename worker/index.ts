@@ -103,7 +103,7 @@ const genSurgeList = async (
 };
 
 app.get("/geosite/:name_with_filter", async (c) => {
-  const nameWithFilter = c.req.param("name_with_filter");
+  const nameWithFilter = c.req.param("name_with_filter").toLowerCase();
   const [name, filter] = nameWithFilter.includes("@")
     ? nameWithFilter.split("@")
     : [nameWithFilter, null];
@@ -147,10 +147,10 @@ app.get("/", async (c) => {
   return c.redirect("https://github.com/xxxbrian/Surge-Geosite");
 });
 
-app.get("/misc/wechat/:t", async (c) => {
-  const t = c.req.param("t");
+app.get("/misc/wechat/:name", async (c) => {
+  const name = c.req.param("name").toLowerCase();
   const githubRaw = await fetch(
-    `https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat/wechat-${t}.list`
+    `https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat/${name}.list`
   )
     .then((res) => {
       if (res.ok) {
