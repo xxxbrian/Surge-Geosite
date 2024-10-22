@@ -14,11 +14,12 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+        submodules: recursive  # Ensures submodules are checked out
 
     - name: Update submodules
       run: |
-        git submodule update --init --recursive
-        git submodule foreach git pull origin master
+        git submodule update --remote --recursive  # Updates submodule references
+        git add upstream  # Stages submodule changes
 
     - name: Generate file table for README
       run: |
