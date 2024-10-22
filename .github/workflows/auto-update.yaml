@@ -60,37 +60,3 @@ jobs:
         else
           echo "No changes to commit"
         fi
-
-  update-wechatdns:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v2
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-      - name: Update WeChat DNS
-        run: |
-          cd misc/wechat-dns
-          bun init -y
-          bun install
-          bun run index.ts > wechat-dns.list
-      - name: Validate WeChat DNS list
-        run: |
-          cd misc/wechat-dns
-          if ! grep -qE '^(#|IP-CIDR,|DOMAIN-SUFFIX,|$)' wechat-dns.list; then
-            echo "Invalid content in wechat-dns.list"
-            exit 1
-          fi
-      - name: Commit and push WeChat DNS changes
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
-          git add misc/wechat-dns/wechat-dns.list
-          if ! git diff --staged --quiet; then
-            git commit -m "[auto] Update WeChat DNS list"
-            git push
-          else
-            echo "No changes to WeChat DNS list"
-          fi

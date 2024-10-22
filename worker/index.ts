@@ -147,9 +147,10 @@ app.get("/", async (c) => {
   return c.redirect("https://github.com/xxxbrian/Surge-Geosite");
 });
 
-app.get("/misc/wechat-dns", async (c) => {
+app.get("/misc/wechat/:t", async (c) => {
+  const t = c.req.param("t");
   const githubRaw = await fetch(
-    "https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat-dns/wechat-dns.list"
+    `https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat/wechat-${t}.list`
   )
     .then((res) => {
       if (res.ok) {
