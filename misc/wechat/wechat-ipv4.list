@@ -8626,6 +8626,8 @@ IP-CIDR,101.32.133.83/32
 	 # wx.qlogo.cn - 印度(124.156.33.58)
 	 # wx.qlogo.cn - 巴西(43.157.130.12)
 	 # wx.qlogo.cn - 泰国(43.128.207.76)
+IP-CIDR,101.32.133.209/32
+     # sgminorshort.wechat.com - 北京移动(120.245.87.244)
 IP-CIDR,101.32.171.239/32
 	 # mmsns.qpic.cn - 香港(43.154.77.43)
 	 # mmsns.qpic.cn - 日本(45.251.241.57)
