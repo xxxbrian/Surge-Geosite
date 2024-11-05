@@ -586,6 +586,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | huffpost | https://surge.bojin.co/geosite/huffpost |
 | hujiang | https://surge.bojin.co/geosite/hujiang |
 | hulu | https://surge.bojin.co/geosite/hulu |
+| hunantv | https://surge.bojin.co/geosite/hunantv |
 | hunantv-ads | https://surge.bojin.co/geosite/hunantv-ads |
 | huobi | https://surge.bojin.co/geosite/huobi |
 | hupu | https://surge.bojin.co/geosite/hupu |
@@ -694,6 +695,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | kugou | https://surge.bojin.co/geosite/kugou |
 | kugou-ads | https://surge.bojin.co/geosite/kugou-ads |
 | kurogames | https://surge.bojin.co/geosite/kurogames |
+| kuwo | https://surge.bojin.co/geosite/kuwo |
 | kyodonews | https://surge.bojin.co/geosite/kyodonews |
 | lagou | https://surge.bojin.co/geosite/lagou |
 | landian | https://surge.bojin.co/geosite/landian |
@@ -1096,6 +1098,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | swisssign | https://surge.bojin.co/geosite/swisssign |
 | sxl | https://surge.bojin.co/geosite/sxl |
 | symantec | https://surge.bojin.co/geosite/symantec |
+| synology | https://surge.bojin.co/geosite/synology |
 | taboola | https://surge.bojin.co/geosite/taboola |
 | tagtic-ads | https://surge.bojin.co/geosite/tagtic-ads |
 | taikang | https://surge.bojin.co/geosite/taikang |
