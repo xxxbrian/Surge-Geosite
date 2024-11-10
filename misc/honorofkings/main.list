@@ -1,0 +1,6 @@
+DOMAIN-SUFFIX,honorofkings.com
+DOMAIN-SUFFIX,sgameglobal.com
+DOMAIN-SUFFIX,hok-dr.intlgame.com
+DOMAIN-SUFFIX,smoba.qq.com
+DOMAIN-SUFFIX,listdl.com
+AND,((DEST-PORT,5010), (PROTOCOL,UDP))

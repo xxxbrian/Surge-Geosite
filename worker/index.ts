@@ -147,10 +147,11 @@ app.get("/", async (c) => {
   return c.redirect("https://github.com/xxxbrian/Surge-Geosite");
 });
 
-app.get("/misc/wechat/:name", async (c) => {
+app.get("/misc/:category/:name", async (c) => {
+  const category = c.req.param("category").toLowerCase();
   const name = c.req.param("name").toLowerCase();
   const githubRaw = await fetch(
-    `https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/wechat/${name}.list`
+    `https://raw.githubusercontent.com/xxxbrian/Surge-Geosite/refs/heads/main/misc/${category}/${name}.list`
   )
     .then((res) => {
       if (res.ok) {
