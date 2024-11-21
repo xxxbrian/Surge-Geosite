@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { cache } from "hono/cache";
 
 import { regexAstToWildcard } from "./wildcard";
+import JSZip from "jszip";
 
 const app = new Hono();
 app.use(logger());
@@ -16,21 +17,53 @@ app.get(
   })
 );
 
-const getUpstream = async (name: string) => {
-  const url = `https://raw.githubusercontent.com/v2fly/domain-list-community/master/data/${name}`;
-  const content = await fetch(url).then((res) => {
+const formatBytes = (bytes: number, decimals = 2) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
+
+const fetchAndUnzip = async () => {
+  const startTime = Date.now();
+  const zipUrl = `https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip`;
+  const zipBlob = await fetch(zipUrl).then((res) => {
     if (res.ok) {
-      return res.text();
+      return res.arrayBuffer();
     }
-    throw new Error(`Failed to fetch content: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to fetch ZIP file: ${res.status} ${res.statusText}`
+    );
   });
-  return content;
+  const fetchTime = Date.now() - startTime;
+
+  const zip = await JSZip.loadAsync(zipBlob);
+  console.log(`Fetched ZIP file (${formatBytes(zipBlob.byteLength)}) in ${fetchTime/1000}s, unzipped ${Object.keys(zip.files).length} files in ${(Date.now() - startTime)/1000}s`);
+  return zip;
+};
+
+const getUpstream = async (cachedZip: JSZip, name: string) => {
+  // Find the file inside the unzipped directory
+  const filePath = `domain-list-community-master/data/${name}`;
+  const fileContent = await cachedZip.file(filePath)?.async("text");
+
+  if (!fileContent) {
+    throw new Error(`File not found in the ZIP archive: ${filePath}`);
+  }
+
+  return fileContent;
 };
 
 const genSurgeList = async (
   upstreamContent: string,
-  filter: string | null = null
+  filter: string | null = null,
+  cachedZip: JSZip | null = null
 ): Promise<string> => {
+  if (!cachedZip) {
+    cachedZip = await fetchAndUnzip();
+  }
   const lines = upstreamContent.split("\n");
   const convertedLines = await Promise.all(
     lines.map(async (line) => {
@@ -85,14 +118,19 @@ const genSurgeList = async (
       }
       if (line.startsWith("include:")) {
         const subContentName = line.split(" ")[0].replace("include:", "");
-        const subUpstreamContent = await getUpstream(subContentName).catch(
-          (err) => {
-            throw new Error(
-              `Failed to fetch sub-upstream content: ${err.message}`
-            );
-          }
+        const subUpstreamContent = await getUpstream(
+          cachedZip,
+          subContentName
+        ).catch((err) => {
+          throw new Error(
+            `Failed to fetch sub-upstream content: ${err.message}`
+          );
+        });
+        const subSurgeList = await genSurgeList(
+          subUpstreamContent,
+          filter,
+          cachedZip
         );
-        const subSurgeList = await genSurgeList(subUpstreamContent, filter);
         return "# " + line + "\n" + subSurgeList;
       }
       return convert("", "DOMAIN-SUFFIX,");
@@ -107,14 +145,19 @@ app.get("/geosite/:name_with_filter", async (c) => {
   const [name, filter] = nameWithFilter.includes("@")
     ? nameWithFilter.split("@")
     : [nameWithFilter, null];
+  const cachedZip = await fetchAndUnzip();
 
   // const type = c.req.query("type") || "surge";
-  const upstreamContent = await getUpstream(name).catch((err) => {
+  const upstreamContent = await getUpstream(cachedZip, name).catch((err) => {
     throw new HTTPException(500, {
       message: `Failed to fetch upstream content: ${err.message}`,
     });
   });
-  const surgeList = await genSurgeList(upstreamContent, filter).catch((err) => {
+  const surgeList = await genSurgeList(
+    upstreamContent,
+    filter,
+    cachedZip
+  ).catch((err) => {
     throw new HTTPException(500, {
       message: `Failed to generate Surge list: ${err.message}`,
     });

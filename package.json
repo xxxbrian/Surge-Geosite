@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "hono": "^4.5.10",
+    "jszip": "^3.10.1",
     "regjsparser": "^0.10.0"
   },
   "devDependencies": {
