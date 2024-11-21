@@ -24,7 +24,7 @@ const formatBytes = (bytes: number, decimals = 2) => {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
-}
+};
 
 const fetchAndUnzip = async () => {
   const startTime = Date.now();
@@ -37,10 +37,16 @@ const fetchAndUnzip = async () => {
       `Failed to fetch ZIP file: ${res.status} ${res.statusText}`
     );
   });
-  const fetchTime = Date.now() - startTime;
+  const fetchedTime = Date.now();
 
   const zip = await JSZip.loadAsync(zipBlob);
-  console.log(`Fetched ZIP file (${formatBytes(zipBlob.byteLength)}) in ${fetchTime/1000}s, unzipped ${Object.keys(zip.files).length} files in ${(Date.now() - startTime)/1000}s`);
+  console.log(
+    `Fetched ZIP file (${formatBytes(zipBlob.byteLength)}) in ${
+      startTime - fetchedTime
+    }ms, unzipped ${Object.keys(zip.files).length} files in ${
+      Date.now() - fetchedTime
+    }ms`
+  );
   return zip;
 };
 
