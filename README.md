@@ -988,6 +988,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | reddit | https://surge.bojin.co/geosite/reddit |
 | redhat | https://surge.bojin.co/geosite/redhat |
 | redis | https://surge.bojin.co/geosite/redis |
+| redotpay | https://surge.bojin.co/geosite/redotpay |
 | redtube | https://surge.bojin.co/geosite/redtube |
 | remirepo | https://surge.bojin.co/geosite/remirepo |
 | renren | https://surge.bojin.co/geosite/renren |
