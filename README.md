@@ -105,6 +105,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | apple | https://surge.bojin.co/geosite/apple |
 | apple-ads | https://surge.bojin.co/geosite/apple-ads |
 | apple-dev | https://surge.bojin.co/geosite/apple-dev |
+| apple-intelligence | https://surge.bojin.co/geosite/apple-intelligence |
 | apple-pki | https://surge.bojin.co/geosite/apple-pki |
 | apple-update | https://surge.bojin.co/geosite/apple-update |
 | appledaily | https://surge.bojin.co/geosite/appledaily |
@@ -140,6 +141,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | bamtech | https://surge.bojin.co/geosite/bamtech |
 | bandcamp | https://surge.bojin.co/geosite/bandcamp |
 | bandwagonhost | https://surge.bojin.co/geosite/bandwagonhost |
+| bangumi | https://surge.bojin.co/geosite/bangumi |
 | barrons | https://surge.bojin.co/geosite/barrons |
 | bbc | https://surge.bojin.co/geosite/bbc |
 | bcy | https://surge.bojin.co/geosite/bcy |
@@ -542,6 +544,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | gravatar | https://surge.bojin.co/geosite/gravatar |
 | greatfire | https://surge.bojin.co/geosite/greatfire |
 | gree | https://surge.bojin.co/geosite/gree |
+| groq | https://surge.bojin.co/geosite/groq |
 | growingio-ads | https://surge.bojin.co/geosite/growingio-ads |
 | gucci | https://surge.bojin.co/geosite/gucci |
 | guo | https://surge.bojin.co/geosite/guo |
