@@ -91,6 +91,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | anandtech | https://surge.bojin.co/geosite/anandtech |
 | android | https://surge.bojin.co/geosite/android |
 | anime | https://surge.bojin.co/geosite/anime |
+| annas-archive | https://surge.bojin.co/geosite/annas-archive |
 | anon-v | https://surge.bojin.co/geosite/anon-v |
 | anthropic | https://surge.bojin.co/geosite/anthropic |
 | antutu | https://surge.bojin.co/geosite/antutu |
