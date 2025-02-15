@@ -697,6 +697,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | kodi | https://surge.bojin.co/geosite/kodi |
 | konachan | https://surge.bojin.co/geosite/konachan |
 | koolearn | https://surge.bojin.co/geosite/koolearn |
+| kraken | https://surge.bojin.co/geosite/kraken |
 | ku6 | https://surge.bojin.co/geosite/ku6 |
 | kuaikan | https://surge.bojin.co/geosite/kuaikan |
 | kuaishou | https://surge.bojin.co/geosite/kuaishou |
@@ -1178,6 +1179,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | topcoder | https://surge.bojin.co/geosite/topcoder |
 | tor | https://surge.bojin.co/geosite/tor |
 | torproject | https://surge.bojin.co/geosite/torproject |
+| trackernetwork | https://surge.bojin.co/geosite/trackernetwork |
 | translatewiki | https://surge.bojin.co/geosite/translatewiki |
 | trello | https://surge.bojin.co/geosite/trello |
 | trustwave | https://surge.bojin.co/geosite/trustwave |
