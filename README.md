@@ -902,6 +902,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | osdn | https://surge.bojin.co/geosite/osdn |
 | osu | https://surge.bojin.co/geosite/osu |
 | oup | https://surge.bojin.co/geosite/oup |
+| ozon | https://surge.bojin.co/geosite/ozon |
 | pagecdn | https://surge.bojin.co/geosite/pagecdn |
 | panasonic | https://surge.bojin.co/geosite/panasonic |
 | pandanet | https://surge.bojin.co/geosite/pandanet |
