@@ -824,6 +824,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | musixmatch | https://surge.bojin.co/geosite/musixmatch |
 | muwai | https://surge.bojin.co/geosite/muwai |
 | mxplayer-ads | https://surge.bojin.co/geosite/mxplayer-ads |
+| mxroute | https://surge.bojin.co/geosite/mxroute |
 | mydirtyhobby | https://surge.bojin.co/geosite/mydirtyhobby |
 | myfonts | https://surge.bojin.co/geosite/myfonts |
 | myradio | https://surge.bojin.co/geosite/myradio |
