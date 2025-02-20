@@ -25,6 +25,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | 1337x | https://surge.bojin.co/geosite/1337x |
 | 17zuoye | https://surge.bojin.co/geosite/17zuoye |
 | 18comic | https://surge.bojin.co/geosite/18comic |
+| 2ch | https://surge.bojin.co/geosite/2ch |
 | 2kgames | https://surge.bojin.co/geosite/2kgames |
 | 36kr | https://surge.bojin.co/geosite/36kr |
 | 3dm | https://surge.bojin.co/geosite/3dm |
