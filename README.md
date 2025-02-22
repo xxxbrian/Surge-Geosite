@@ -849,6 +849,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | newscorp | https://surge.bojin.co/geosite/newscorp |
 | newsmax | https://surge.bojin.co/geosite/newsmax |
 | nexitally | https://surge.bojin.co/geosite/nexitally |
+| nexo | https://surge.bojin.co/geosite/nexo |
 | nexon | https://surge.bojin.co/geosite/nexon |
 | nga | https://surge.bojin.co/geosite/nga |
 | nginx | https://surge.bojin.co/geosite/nginx |
