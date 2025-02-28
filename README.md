@@ -1201,6 +1201,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | truyen-hentai | https://surge.bojin.co/geosite/truyen-hentai |
 | tsquare | https://surge.bojin.co/geosite/tsquare |
 | tube8 | https://surge.bojin.co/geosite/tube8 |
+| tubi | https://surge.bojin.co/geosite/tubi |
 | tumblr | https://surge.bojin.co/geosite/tumblr |
 | tutanota | https://surge.bojin.co/geosite/tutanota |
 | tvb | https://surge.bojin.co/geosite/tvb |
