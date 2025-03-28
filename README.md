@@ -68,6 +68,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | aerogard | https://surge.bojin.co/geosite/aerogard |
 | afdian | https://surge.bojin.co/geosite/afdian |
 | afp | https://surge.bojin.co/geosite/afp |
+| agilebits | https://surge.bojin.co/geosite/agilebits |
 | agora | https://surge.bojin.co/geosite/agora |
 | aiqicha | https://surge.bojin.co/geosite/aiqicha |
 | airchina | https://surge.bojin.co/geosite/airchina |
@@ -110,6 +111,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | apple-dev | https://surge.bojin.co/geosite/apple-dev |
 | apple-intelligence | https://surge.bojin.co/geosite/apple-intelligence |
 | apple-pki | https://surge.bojin.co/geosite/apple-pki |
+| apple-tvplus | https://surge.bojin.co/geosite/apple-tvplus |
 | apple-update | https://surge.bojin.co/geosite/apple-update |
 | appledaily | https://surge.bojin.co/geosite/appledaily |
 | applovin-ads | https://surge.bojin.co/geosite/applovin-ads |
@@ -663,6 +665,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ishumei | https://surge.bojin.co/geosite/ishumei |
 | itchio | https://surge.bojin.co/geosite/itchio |
 | itunes | https://surge.bojin.co/geosite/itunes |
+| ixsystems | https://surge.bojin.co/geosite/ixsystems |
 | iyf | https://surge.bojin.co/geosite/iyf |
 | j-test | https://surge.bojin.co/geosite/j-test |
 | jable | https://surge.bojin.co/geosite/jable |
@@ -1148,6 +1151,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | swisssign | https://surge.bojin.co/geosite/swisssign |
 | sxl | https://surge.bojin.co/geosite/sxl |
 | symantec | https://surge.bojin.co/geosite/symantec |
+| symantec-pki | https://surge.bojin.co/geosite/symantec-pki |
 | synology | https://surge.bojin.co/geosite/synology |
 | taboola | https://surge.bojin.co/geosite/taboola |
 | tagtic-ads | https://surge.bojin.co/geosite/tagtic-ads |
@@ -1253,6 +1257,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | veet | https://surge.bojin.co/geosite/veet |
 | vercel | https://surge.bojin.co/geosite/vercel |
 | verisign | https://surge.bojin.co/geosite/verisign |
+| verisign-pki | https://surge.bojin.co/geosite/verisign-pki |
 | verizon | https://surge.bojin.co/geosite/verizon |
 | vgtime | https://surge.bojin.co/geosite/vgtime |
 | vilavpn | https://surge.bojin.co/geosite/vilavpn |
