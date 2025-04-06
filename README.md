@@ -221,6 +221,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-ads-all | https://surge.bojin.co/geosite/category-ads-all |
 | category-ads-ir | https://surge.bojin.co/geosite/category-ads-ir |
 | category-ai-!cn | https://surge.bojin.co/geosite/category-ai-!cn |
+| category-ai-chat-!cn | https://surge.bojin.co/geosite/category-ai-chat-!cn |
 | category-ai-cn | https://surge.bojin.co/geosite/category-ai-cn |
 | category-android-app-download | https://surge.bojin.co/geosite/category-android-app-download |
 | category-anticensorship | https://surge.bojin.co/geosite/category-anticensorship |
@@ -291,6 +292,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-social-media-!cn | https://surge.bojin.co/geosite/category-social-media-!cn |
 | category-social-media-cn | https://surge.bojin.co/geosite/category-social-media-cn |
 | category-social-media-ir | https://surge.bojin.co/geosite/category-social-media-ir |
+| category-speedtest | https://surge.bojin.co/geosite/category-speedtest |
 | category-tech-ir | https://surge.bojin.co/geosite/category-tech-ir |
 | category-tech-media | https://surge.bojin.co/geosite/category-tech-media |
 | category-travel-ir | https://surge.bojin.co/geosite/category-travel-ir |
