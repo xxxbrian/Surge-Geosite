@@ -244,6 +244,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-ecommerce | https://surge.bojin.co/geosite/category-ecommerce |
 | category-education-cn | https://surge.bojin.co/geosite/category-education-cn |
 | category-education-ir | https://surge.bojin.co/geosite/category-education-ir |
+| category-emby | https://surge.bojin.co/geosite/category-emby |
 | category-enhance-gaming | https://surge.bojin.co/geosite/category-enhance-gaming |
 | category-enterprise-query-platform-cn | https://surge.bojin.co/geosite/category-enterprise-query-platform-cn |
 | category-entertainment | https://surge.bojin.co/geosite/category-entertainment |
@@ -279,6 +280,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-number-verification-cn | https://surge.bojin.co/geosite/category-number-verification-cn |
 | category-olympiad-in-informatics | https://surge.bojin.co/geosite/category-olympiad-in-informatics |
 | category-orgs | https://surge.bojin.co/geosite/category-orgs |
+| category-password-management | https://surge.bojin.co/geosite/category-password-management |
 | category-payment-ir | https://surge.bojin.co/geosite/category-payment-ir |
 | category-porn | https://surge.bojin.co/geosite/category-porn |
 | category-pt | https://surge.bojin.co/geosite/category-pt |
@@ -631,6 +633,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | icloud | https://surge.bojin.co/geosite/icloud |
 | icloudprivaterelay | https://surge.bojin.co/geosite/icloudprivaterelay |
 | identrust | https://surge.bojin.co/geosite/identrust |
+| idg | https://surge.bojin.co/geosite/idg |
 | ieee | https://surge.bojin.co/geosite/ieee |
 | ifanr | https://surge.bojin.co/geosite/ifanr |
 | ifast | https://surge.bojin.co/geosite/ifast |
@@ -717,6 +720,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | kindle4rss | https://surge.bojin.co/geosite/kindle4rss |
 | kingkonglive | https://surge.bojin.co/geosite/kingkonglive |
 | kingsoft | https://surge.bojin.co/geosite/kingsoft |
+| kinopub | https://surge.bojin.co/geosite/kinopub |
 | kkbox | https://surge.bojin.co/geosite/kkbox |
 | kktv | https://surge.bojin.co/geosite/kktv |
 | knovel | https://surge.bojin.co/geosite/knovel |
@@ -746,6 +750,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | lark | https://surge.bojin.co/geosite/lark |
 | lark-global | https://surge.bojin.co/geosite/lark-global |
 | lastfm | https://surge.bojin.co/geosite/lastfm |
+| lastpass | https://surge.bojin.co/geosite/lastpass |
 | launchpad | https://surge.bojin.co/geosite/launchpad |
 | lavteam | https://surge.bojin.co/geosite/lavteam |
 | ldmnq | https://surge.bojin.co/geosite/ldmnq |
@@ -780,6 +785,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | longbridge | https://surge.bojin.co/geosite/longbridge |
 | lowiro | https://surge.bojin.co/geosite/lowiro |
 | ltn | https://surge.bojin.co/geosite/ltn |
+| lumion | https://surge.bojin.co/geosite/lumion |
 | lysol | https://surge.bojin.co/geosite/lysol |
 | madshi | https://surge.bojin.co/geosite/madshi |
 | mafengwo | https://surge.bojin.co/geosite/mafengwo |
@@ -873,6 +879,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | netflix | https://surge.bojin.co/geosite/netflix |
 | netlify | https://surge.bojin.co/geosite/netlify |
 | neuralink | https://surge.bojin.co/geosite/neuralink |
+| newegg | https://surge.bojin.co/geosite/newegg |
 | newrelic-ads | https://surge.bojin.co/geosite/newrelic-ads |
 | newscorp | https://surge.bojin.co/geosite/newscorp |
 | newsmax | https://surge.bojin.co/geosite/newsmax |
@@ -1109,6 +1116,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | soundofhope | https://surge.bojin.co/geosite/soundofhope |
 | sourceforge | https://surge.bojin.co/geosite/sourceforge |
 | sourcehut | https://surge.bojin.co/geosite/sourcehut |
+| soyjakparty | https://surge.bojin.co/geosite/soyjakparty |
 | spacemail | https://surge.bojin.co/geosite/spacemail |
 | spaceship | https://surge.bojin.co/geosite/spaceship |
 | spacex | https://surge.bojin.co/geosite/spacex |
@@ -1168,6 +1176,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | taylorfrancis | https://surge.bojin.co/geosite/taylorfrancis |
 | teambition | https://surge.bojin.co/geosite/teambition |
 | teamviewer | https://surge.bojin.co/geosite/teamviewer |
+| techpowerup | https://surge.bojin.co/geosite/techpowerup |
 | techtimes | https://surge.bojin.co/geosite/techtimes |
 | ted | https://surge.bojin.co/geosite/ted |
 | telegram | https://surge.bojin.co/geosite/telegram |
@@ -1252,6 +1261,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | unity | https://surge.bojin.co/geosite/unity |
 | unity-ads | https://surge.bojin.co/geosite/unity-ads |
 | upai | https://surge.bojin.co/geosite/upai |
+| usersdrive | https://surge.bojin.co/geosite/usersdrive |
 | uu-chat | https://surge.bojin.co/geosite/uu-chat |
 | v2ray | https://surge.bojin.co/geosite/v2ray |
 | v8 | https://surge.bojin.co/geosite/v8 |
