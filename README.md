@@ -602,6 +602,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | homedepot | https://surge.bojin.co/geosite/homedepot |
 | hongdunwang | https://surge.bojin.co/geosite/hongdunwang |
 | hongkongpost | https://surge.bojin.co/geosite/hongkongpost |
+| honor | https://surge.bojin.co/geosite/honor |
 | hooligapps | https://surge.bojin.co/geosite/hooligapps |
 | hotjar-ads | https://surge.bojin.co/geosite/hotjar-ads |
 | hotstar | https://surge.bojin.co/geosite/hotstar |
