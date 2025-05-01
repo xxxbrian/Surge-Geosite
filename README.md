@@ -197,6 +197,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | bridgestone | https://surge.bojin.co/geosite/bridgestone |
 | brightcove | https://surge.bojin.co/geosite/brightcove |
 | brilliant | https://surge.bojin.co/geosite/brilliant |
+| broadcom | https://surge.bojin.co/geosite/broadcom |
 | btdig | https://surge.bojin.co/geosite/btdig |
 | bttzyw | https://surge.bojin.co/geosite/bttzyw |
 | buymeacoffee | https://surge.bojin.co/geosite/buymeacoffee |
@@ -853,6 +854,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | moxing | https://surge.bojin.co/geosite/moxing |
 | mozilla | https://surge.bojin.co/geosite/mozilla |
 | mpv | https://surge.bojin.co/geosite/mpv |
+| msi | https://surge.bojin.co/geosite/msi |
 | msn | https://surge.bojin.co/geosite/msn |
 | mucinex | https://surge.bojin.co/geosite/mucinex |
 | mudvod | https://surge.bojin.co/geosite/mudvod |
