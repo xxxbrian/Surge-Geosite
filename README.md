@@ -856,6 +856,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mpv | https://surge.bojin.co/geosite/mpv |
 | msi | https://surge.bojin.co/geosite/msi |
 | msn | https://surge.bojin.co/geosite/msn |
+| mubi | https://surge.bojin.co/geosite/mubi |
 | mucinex | https://surge.bojin.co/geosite/mucinex |
 | mudvod | https://surge.bojin.co/geosite/mudvod |
 | muji | https://surge.bojin.co/geosite/muji |
