@@ -302,6 +302,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-tech-ir | https://surge.bojin.co/geosite/category-tech-ir |
 | category-tech-media | https://surge.bojin.co/geosite/category-tech-media |
 | category-travel-ir | https://surge.bojin.co/geosite/category-travel-ir |
+| category-voip | https://surge.bojin.co/geosite/category-voip |
 | category-vpnservices | https://surge.bojin.co/geosite/category-vpnservices |
 | category-wiki-cn | https://surge.bojin.co/geosite/category-wiki-cn |
 | cavporn | https://surge.bojin.co/geosite/cavporn |
@@ -1178,6 +1179,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | tagtic-ads | https://surge.bojin.co/geosite/tagtic-ads |
 | taikang | https://surge.bojin.co/geosite/taikang |
 | tailscale | https://surge.bojin.co/geosite/tailscale |
+| talktone | https://surge.bojin.co/geosite/talktone |
 | taomee | https://surge.bojin.co/geosite/taomee |
 | tappx-ads | https://surge.bojin.co/geosite/tappx-ads |
 | taptap | https://surge.bojin.co/geosite/taptap |
