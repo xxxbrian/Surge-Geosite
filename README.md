@@ -780,6 +780,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | linkedin | https://surge.bojin.co/geosite/linkedin |
 | linotype | https://surge.bojin.co/geosite/linotype |
 | linux | https://surge.bojin.co/geosite/linux |
+| linuxdo | https://surge.bojin.co/geosite/linuxdo |
 | lisiku | https://surge.bojin.co/geosite/lisiku |
 | litv | https://surge.bojin.co/geosite/litv |
 | lizhi | https://surge.bojin.co/geosite/lizhi |
