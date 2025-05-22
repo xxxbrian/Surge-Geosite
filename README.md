@@ -1303,6 +1303,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | volvo | https://surge.bojin.co/geosite/volvo |
 | voxmedia | https://surge.bojin.co/geosite/voxmedia |
 | vpngate | https://surge.bojin.co/geosite/vpngate |
+| vrzwk | https://surge.bojin.co/geosite/vrzwk |
 | vultr | https://surge.bojin.co/geosite/vultr |
 | w3schools | https://surge.bojin.co/geosite/w3schools |
 | walmart | https://surge.bojin.co/geosite/walmart |
