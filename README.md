@@ -1180,7 +1180,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | tagtic-ads | https://surge.bojin.co/geosite/tagtic-ads |
 | taikang | https://surge.bojin.co/geosite/taikang |
 | tailscale | https://surge.bojin.co/geosite/tailscale |
-| talktone | https://surge.bojin.co/geosite/talktone |
+| talkatone | https://surge.bojin.co/geosite/talkatone |
 | taomee | https://surge.bojin.co/geosite/taomee |
 | tappx-ads | https://surge.bojin.co/geosite/tappx-ads |
 | taptap | https://surge.bojin.co/geosite/taptap |
