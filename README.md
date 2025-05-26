@@ -282,6 +282,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-number-verification-cn | https://surge.bojin.co/geosite/category-number-verification-cn |
 | category-olympiad-in-informatics | https://surge.bojin.co/geosite/category-olympiad-in-informatics |
 | category-orgs | https://surge.bojin.co/geosite/category-orgs |
+| category-outsource-cn | https://surge.bojin.co/geosite/category-outsource-cn |
 | category-password-management | https://surge.bojin.co/geosite/category-password-management |
 | category-payment-ir | https://surge.bojin.co/geosite/category-payment-ir |
 | category-porn | https://surge.bojin.co/geosite/category-porn |
@@ -938,6 +939,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | opencollective | https://surge.bojin.co/geosite/opencollective |
 | openjsfoundation | https://surge.bojin.co/geosite/openjsfoundation |
 | opensourceinsights | https://surge.bojin.co/geosite/opensourceinsights |
+| openspeedtest | https://surge.bojin.co/geosite/openspeedtest |
 | openstreetmap | https://surge.bojin.co/geosite/openstreetmap |
 | openweather | https://surge.bojin.co/geosite/openweather |
 | openwrt | https://surge.bojin.co/geosite/openwrt |
