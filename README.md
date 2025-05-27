@@ -404,6 +404,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | deribit | https://surge.bojin.co/geosite/deribit |
 | dettol | https://surge.bojin.co/geosite/dettol |
 | deviantart | https://surge.bojin.co/geosite/deviantart |
+| dewu | https://surge.bojin.co/geosite/dewu |
 | dgtle | https://surge.bojin.co/geosite/dgtle |
 | dida365 | https://surge.bojin.co/geosite/dida365 |
 | didi | https://surge.bojin.co/geosite/didi |
