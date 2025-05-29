@@ -877,6 +877,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | myradio | https://surge.bojin.co/geosite/myradio |
 | mytvsuper | https://surge.bojin.co/geosite/mytvsuper |
 | mzed | https://surge.bojin.co/geosite/mzed |
+| n26 | https://surge.bojin.co/geosite/n26 |
 | n3ro | https://surge.bojin.co/geosite/n3ro |
 | narwal | https://surge.bojin.co/geosite/narwal |
 | nat-test | https://surge.bojin.co/geosite/nat-test |
