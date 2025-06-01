@@ -500,6 +500,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | feishu | https://surge.bojin.co/geosite/feishu |
 | fengxing | https://surge.bojin.co/geosite/fengxing |
 | fflogs | https://surge.bojin.co/geosite/fflogs |
+| fibank | https://surge.bojin.co/geosite/fibank |
 | figma | https://surge.bojin.co/geosite/figma |
 | filimo | https://surge.bojin.co/geosite/filimo |
 | finish | https://surge.bojin.co/geosite/finish |
