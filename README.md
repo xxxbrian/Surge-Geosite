@@ -123,6 +123,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | arphic | https://surge.bojin.co/geosite/arphic |
 | artstation | https://surge.bojin.co/geosite/artstation |
 | asahi | https://surge.bojin.co/geosite/asahi |
+| asobo | https://surge.bojin.co/geosite/asobo |
 | asproex | https://surge.bojin.co/geosite/asproex |
 | asus | https://surge.bojin.co/geosite/asus |
 | atlassian | https://surge.bojin.co/geosite/atlassian |
@@ -518,6 +519,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | fontshop | https://surge.bojin.co/geosite/fontshop |
 | fontsinuse | https://surge.bojin.co/geosite/fontsinuse |
 | forbes | https://surge.bojin.co/geosite/forbes |
+| forza | https://surge.bojin.co/geosite/forza |
 | foundertype | https://surge.bojin.co/geosite/foundertype |
 | fox | https://surge.bojin.co/geosite/fox |
 | fqnovel | https://surge.bojin.co/geosite/fqnovel |
@@ -1069,6 +1071,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | rust | https://surge.bojin.co/geosite/rust |
 | ruten | https://surge.bojin.co/geosite/ruten |
 | rutracker | https://surge.bojin.co/geosite/rutracker |
+| sakurafrp | https://surge.bojin.co/geosite/sakurafrp |
 | salesforce | https://surge.bojin.co/geosite/salesforce |
 | samsung | https://surge.bojin.co/geosite/samsung |
 | sankei | https://surge.bojin.co/geosite/sankei |
