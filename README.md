@@ -998,6 +998,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | pocketcasts | https://surge.bojin.co/geosite/pocketcasts |
 | pocoiq-ads | https://surge.bojin.co/geosite/pocoiq-ads |
 | poe | https://surge.bojin.co/geosite/poe |
+| polocloud | https://surge.bojin.co/geosite/polocloud |
 | polymer | https://surge.bojin.co/geosite/polymer |
 | polyv | https://surge.bojin.co/geosite/polyv |
 | pornhub | https://surge.bojin.co/geosite/pornhub |
