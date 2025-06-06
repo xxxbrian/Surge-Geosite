@@ -259,6 +259,8 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-game-accelerator-cn | https://surge.bojin.co/geosite/category-game-accelerator-cn |
 | category-game-platforms-download | https://surge.bojin.co/geosite/category-game-platforms-download |
 | category-games | https://surge.bojin.co/geosite/category-games |
+| category-games-!cn | https://surge.bojin.co/geosite/category-games-!cn |
+| category-games-cn | https://surge.bojin.co/geosite/category-games-cn |
 | category-gov-ir | https://surge.bojin.co/geosite/category-gov-ir |
 | category-gov-ru | https://surge.bojin.co/geosite/category-gov-ru |
 | category-hospital-cn | https://surge.bojin.co/geosite/category-hospital-cn |
