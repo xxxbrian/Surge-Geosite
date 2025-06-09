@@ -1317,6 +1317,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | vrzwk | https://surge.bojin.co/geosite/vrzwk |
 | vultr | https://surge.bojin.co/geosite/vultr |
 | w3schools | https://surge.bojin.co/geosite/w3schools |
+| wallhaven | https://surge.bojin.co/geosite/wallhaven |
 | walmart | https://surge.bojin.co/geosite/walmart |
 | wanfang | https://surge.bojin.co/geosite/wanfang |
 | wangsu | https://surge.bojin.co/geosite/wangsu |
