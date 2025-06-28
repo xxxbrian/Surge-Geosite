@@ -1065,6 +1065,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | rockstar | https://surge.bojin.co/geosite/rockstar |
 | roku | https://surge.bojin.co/geosite/roku |
 | rsshub | https://surge.bojin.co/geosite/rsshub |
+| rsshub-3rd | https://surge.bojin.co/geosite/rsshub-3rd |
 | rthk | https://surge.bojin.co/geosite/rthk |
 | ruanmei | https://surge.bojin.co/geosite/ruanmei |
 | ruby | https://surge.bojin.co/geosite/ruby |
