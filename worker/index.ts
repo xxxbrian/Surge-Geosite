@@ -26,22 +26,31 @@ const formatBytes = (bytes: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 };
 
-const getLatestCommitHash = async (): Promise<string | null> => {
+const getZipETag = async (zipUrl: string): Promise<string | null> => {
   try {
-    const apiUrl = 'https://api.github.com/repos/v2fly/domain-list-community/commits/master';
-    const response = await fetch(apiUrl, {
+    // Only fetch headers to get ETag without downloading the full ZIP
+    const response = await fetch(zipUrl, { 
+      method: 'HEAD',
       headers: {
         'User-Agent': 'Surge-Geosite-Worker/1.0'
       }
     });
+    
     if (!response.ok) {
-      console.warn(`GitHub API returned ${response.status}, using fallback caching`);
+      console.warn(`Failed to get ZIP ETag: ${response.status} ${response.statusText}`);
       return null;
     }
-    const data = await response.json() as { sha: string };
-    return data.sha;
+    
+    const etag = response.headers.get('etag');
+    if (etag) {
+      // Clean up ETag (remove quotes and W/ prefix if present)
+      return etag.replace(/^W\/|"/g, '');
+    }
+    
+    console.warn('No ETag found in ZIP response headers');
+    return null;
   } catch (error) {
-    console.warn('Failed to fetch commit hash:', error);
+    console.warn('Failed to fetch ZIP ETag:', error);
     return null;
   }
 };
@@ -50,10 +59,10 @@ const fetchAndUnzip = async () => {
   const startTime = Date.now();
   const zipUrl = `https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip`;
 
-  // Get latest commit hash for cache key, fallback to time-based caching
-  const commitHash = await getLatestCommitHash();
-  const cacheKey = commitHash
-    ? new Request(`https://cache.local/zip-cache/${commitHash}`)
+  // Get ZIP ETag for cache key, fallback to time-based caching
+  const zipETag = await getZipETag(zipUrl);
+  const cacheKey = zipETag
+    ? new Request(`https://cache.local/zip-cache/${zipETag}`)
     : new Request(`https://cache.local/zip-cache/fallback-${Math.floor(Date.now() / (1000 * 60 * 30))}`);
 
   const cache = caches.default;
@@ -64,7 +73,7 @@ const fetchAndUnzip = async () => {
 
   if (cachedResponse) {
     zipBlob = await cachedResponse.arrayBuffer();
-    const cacheType = commitHash ? `commit ${commitHash.substring(0, 7)}` : 'time-based cache';
+    const cacheType = zipETag ? `ETag ${zipETag.substring(0, 8)}` : 'time-based cache';
     console.log(`Using cached ZIP file (${formatBytes(zipBlob.byteLength)}) from ${cacheType}`);
   } else {
     // Fetch from upstream
@@ -79,14 +88,14 @@ const fetchAndUnzip = async () => {
     // Cache the response
     const cacheResponse = new Response(zipBlob, {
       headers: {
-        'Cache-Control': commitHash ? 'public, max-age=86400' : 'public, max-age=1800', // 24h for commit-based, 30min for fallback
+        'Cache-Control': zipETag ? 'public, max-age=86400' : 'public, max-age=1800', // 24h for ETag-based, 30min for fallback
         'Content-Type': 'application/zip',
-        'X-Commit-Hash': commitHash || 'fallback'
+        'X-ETag': zipETag || 'fallback'
       }
     });
     await cache.put(cacheKey, cacheResponse);
 
-    const cacheType = commitHash ? `commit ${commitHash.substring(0, 7)}` : 'fallback cache';
+    const cacheType = zipETag ? `ETag ${zipETag.substring(0, 8)}` : 'fallback cache';
     console.log(`Fetched and cached ZIP file (${formatBytes(zipBlob.byteLength)}) for ${cacheType} in ${fetchedTime - startTime}ms`);
   }
 
@@ -193,41 +202,42 @@ const genSurgeList = async (
 
 app.get("/geosite/:name_with_filter", async (c) => {
   const nameWithFilter = c.req.param("name_with_filter").toLowerCase().trim();
-  
+
   // Validate input
   if (!nameWithFilter || nameWithFilter.length === 0) {
     throw new HTTPException(400, { message: "Invalid name parameter" });
   }
-  
+
   const [name, filter] = nameWithFilter.includes("@")
     ? nameWithFilter.split("@", 2)  // Only split on first @
     : [nameWithFilter, null];
-    
+
   // Validate name after splitting
   if (!name || name.length === 0) {
     throw new HTTPException(400, { message: "Invalid name parameter" });
   }
 
   try {
-    // Try to get commit hash for precise caching
-    const commitHash = await getLatestCommitHash();
+    // Try to get ZIP ETag for precise caching
+    const zipUrl = `https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip`;
+    const zipETag = await getZipETag(zipUrl);
     const cache = caches.default;
-    
+
     // Create cache key for final result
-    const resultCacheKey = commitHash 
-      ? new Request(`https://cache.local/result/${commitHash}/${nameWithFilter}`)
+    const resultCacheKey = zipETag
+      ? new Request(`https://cache.local/result/${zipETag}/${nameWithFilter}`)
       : new Request(`https://cache.local/result/fallback-${Math.floor(Date.now() / (1000 * 60 * 30))}/${nameWithFilter}`);
-    
+
     // Try to get cached result first
     const cachedResult = await cache.match(resultCacheKey);
     if (cachedResult) {
       const result = await cachedResult.text();
-      console.log(`Cache hit for ${nameWithFilter} ${commitHash ? `(commit ${commitHash.substring(0, 7)})` : '(fallback)'}`);
+      console.log(`Cache hit for ${nameWithFilter} ${zipETag ? `(ETag ${zipETag.substring(0, 8)})` : '(fallback)'}`);
       return c.text(result);
     }
 
     console.log(`Cache miss for ${nameWithFilter}, generating new result...`);
-    
+
     // Cache miss - need to generate result
     const cachedZip = await fetchAndUnzip();
     const upstreamContent = await getUpstream(cachedZip, name).catch((err) => {
@@ -235,7 +245,7 @@ app.get("/geosite/:name_with_filter", async (c) => {
         message: `Failed to fetch upstream content: ${err.message}`,
       });
     });
-    
+
     const surgeList = await genSurgeList(
       upstreamContent,
       filter,
@@ -250,20 +260,20 @@ app.get("/geosite/:name_with_filter", async (c) => {
     const resultResponse = new Response(surgeList, {
       headers: {
         'Content-Type': 'text/plain',
-        'Cache-Control': commitHash ? 'public, max-age=86400' : 'public, max-age=1800',
-        'X-Commit-Hash': commitHash || 'fallback',
+        'Cache-Control': zipETag ? 'public, max-age=86400' : 'public, max-age=1800',
+        'X-ETag': zipETag || 'fallback',
         'X-Generated-At': new Date().toISOString()
       }
     });
-    
+
     // Don't await cache.put to avoid blocking response
     cache.put(resultCacheKey, resultResponse.clone()).catch(err => {
       console.warn('Failed to cache result:', err);
     });
-    
-    console.log(`Generated and cached result for ${nameWithFilter} ${commitHash ? `(commit ${commitHash.substring(0, 7)})` : '(fallback)'}`);
+
+    console.log(`Generated and cached result for ${nameWithFilter} ${zipETag ? `(ETag ${zipETag.substring(0, 8)})` : '(fallback)'}`);
     return c.text(surgeList);
-    
+
   } catch (error) {
     console.error(`Error processing ${nameWithFilter}:`, error);
     throw new HTTPException(500, {
