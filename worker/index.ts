@@ -26,27 +26,72 @@ const formatBytes = (bytes: number, decimals = 2) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
 };
 
+const getLatestCommitHash = async (): Promise<string | null> => {
+  try {
+    const apiUrl = 'https://api.github.com/repos/v2fly/domain-list-community/commits/master';
+    const response = await fetch(apiUrl, {
+      headers: {
+        'User-Agent': 'Surge-Geosite-Worker/1.0'
+      }
+    });
+    if (!response.ok) {
+      console.warn(`GitHub API returned ${response.status}, using fallback caching`);
+      return null;
+    }
+    const data = await response.json() as { sha: string };
+    return data.sha;
+  } catch (error) {
+    console.warn('Failed to fetch commit hash:', error);
+    return null;
+  }
+};
+
 const fetchAndUnzip = async () => {
   const startTime = Date.now();
   const zipUrl = `https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip`;
-  const zipBlob = await fetch(zipUrl).then((res) => {
-    if (res.ok) {
-      return res.arrayBuffer();
+
+  // Get latest commit hash for cache key, fallback to time-based caching
+  const commitHash = await getLatestCommitHash();
+  const cacheKey = commitHash 
+    ? new Request(`https://cache.local/zip-cache/${commitHash}`)
+    : new Request(`https://cache.local/zip-cache/fallback-${Math.floor(Date.now() / (1000 * 60 * 30))}`);
+  
+  const cache = caches.default;
+
+  // Try to get from cache first
+  let cachedResponse = await cache.match(cacheKey);
+  let zipBlob: ArrayBuffer;
+
+  if (cachedResponse) {
+    zipBlob = await cachedResponse.arrayBuffer();
+    const cacheType = commitHash ? `commit ${commitHash.substring(0, 7)}` : 'time-based cache';
+    console.log(`Using cached ZIP file (${formatBytes(zipBlob.byteLength)}) from ${cacheType}`);
+  } else {
+    // Fetch from upstream
+    const response = await fetch(zipUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ZIP file: ${response.status} ${response.statusText}`);
     }
-    throw new Error(
-      `Failed to fetch ZIP file: ${res.status} ${res.statusText}`
-    );
-  });
-  const fetchedTime = Date.now();
+
+    zipBlob = await response.arrayBuffer();
+    const fetchedTime = Date.now();
+
+    // Cache the response
+    const cacheResponse = new Response(zipBlob, {
+      headers: {
+        'Cache-Control': commitHash ? 'public, max-age=86400' : 'public, max-age=1800', // 24h for commit-based, 30min for fallback
+        'Content-Type': 'application/zip',
+        'X-Commit-Hash': commitHash || 'fallback'
+      }
+    });
+    await cache.put(cacheKey, cacheResponse);
+
+    const cacheType = commitHash ? `commit ${commitHash.substring(0, 7)}` : 'fallback cache';
+    console.log(`Fetched and cached ZIP file (${formatBytes(zipBlob.byteLength)}) for ${cacheType} in ${fetchedTime - startTime}ms`);
+  }
 
   const zip = await JSZip.loadAsync(zipBlob);
-  console.log(
-    `Fetched ZIP file (${formatBytes(zipBlob.byteLength)}) in ${
-      startTime - fetchedTime
-    }ms, unzipped ${Object.keys(zip.files).length} files in ${
-      Date.now() - fetchedTime
-    }ms`
-  );
+  console.log(`Unzipped ${Object.keys(zip.files).length} files in ${Date.now() - startTime}ms`);
   return zip;
 };
 
