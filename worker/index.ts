@@ -192,10 +192,21 @@ const genSurgeList = async (
 };
 
 app.get("/geosite/:name_with_filter", async (c) => {
-  const nameWithFilter = c.req.param("name_with_filter").toLowerCase();
+  const nameWithFilter = c.req.param("name_with_filter").toLowerCase().trim();
+  
+  // Validate input
+  if (!nameWithFilter || nameWithFilter.length === 0) {
+    throw new HTTPException(400, { message: "Invalid name parameter" });
+  }
+  
   const [name, filter] = nameWithFilter.includes("@")
-    ? nameWithFilter.split("@")
+    ? nameWithFilter.split("@", 2)  // Only split on first @
     : [nameWithFilter, null];
+    
+  // Validate name after splitting
+  if (!name || name.length === 0) {
+    throw new HTTPException(400, { message: "Invalid name parameter" });
+  }
 
   try {
     // Try to get commit hash for precise caching
