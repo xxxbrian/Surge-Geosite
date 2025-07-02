@@ -52,10 +52,10 @@ const fetchAndUnzip = async () => {
 
   // Get latest commit hash for cache key, fallback to time-based caching
   const commitHash = await getLatestCommitHash();
-  const cacheKey = commitHash 
+  const cacheKey = commitHash
     ? new Request(`https://cache.local/zip-cache/${commitHash}`)
     : new Request(`https://cache.local/zip-cache/fallback-${Math.floor(Date.now() / (1000 * 60 * 30))}`);
-  
+
   const cache = caches.default;
 
   // Try to get from cache first
@@ -196,24 +196,69 @@ app.get("/geosite/:name_with_filter", async (c) => {
   const [name, filter] = nameWithFilter.includes("@")
     ? nameWithFilter.split("@")
     : [nameWithFilter, null];
-  const cachedZip = await fetchAndUnzip();
 
-  // const type = c.req.query("type") || "surge";
-  const upstreamContent = await getUpstream(cachedZip, name).catch((err) => {
-    throw new HTTPException(500, {
-      message: `Failed to fetch upstream content: ${err.message}`,
+  try {
+    // Try to get commit hash for precise caching
+    const commitHash = await getLatestCommitHash();
+    const cache = caches.default;
+    
+    // Create cache key for final result
+    const resultCacheKey = commitHash 
+      ? new Request(`https://cache.local/result/${commitHash}/${nameWithFilter}`)
+      : new Request(`https://cache.local/result/fallback-${Math.floor(Date.now() / (1000 * 60 * 30))}/${nameWithFilter}`);
+    
+    // Try to get cached result first
+    const cachedResult = await cache.match(resultCacheKey);
+    if (cachedResult) {
+      const result = await cachedResult.text();
+      console.log(`Cache hit for ${nameWithFilter} ${commitHash ? `(commit ${commitHash.substring(0, 7)})` : '(fallback)'}`);
+      return c.text(result);
+    }
+
+    console.log(`Cache miss for ${nameWithFilter}, generating new result...`);
+    
+    // Cache miss - need to generate result
+    const cachedZip = await fetchAndUnzip();
+    const upstreamContent = await getUpstream(cachedZip, name).catch((err) => {
+      throw new HTTPException(500, {
+        message: `Failed to fetch upstream content: ${err.message}`,
+      });
     });
-  });
-  const surgeList = await genSurgeList(
-    upstreamContent,
-    filter,
-    cachedZip
-  ).catch((err) => {
-    throw new HTTPException(500, {
-      message: `Failed to generate Surge list: ${err.message}`,
+    
+    const surgeList = await genSurgeList(
+      upstreamContent,
+      filter,
+      cachedZip
+    ).catch((err) => {
+      throw new HTTPException(500, {
+        message: `Failed to generate Surge list: ${err.message}`,
+      });
     });
-  });
-  return c.text(surgeList);
+
+    // Cache the final result
+    const resultResponse = new Response(surgeList, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Cache-Control': commitHash ? 'public, max-age=86400' : 'public, max-age=1800',
+        'X-Commit-Hash': commitHash || 'fallback',
+        'X-Generated-At': new Date().toISOString()
+      }
+    });
+    
+    // Don't await cache.put to avoid blocking response
+    cache.put(resultCacheKey, resultResponse.clone()).catch(err => {
+      console.warn('Failed to cache result:', err);
+    });
+    
+    console.log(`Generated and cached result for ${nameWithFilter} ${commitHash ? `(commit ${commitHash.substring(0, 7)})` : '(fallback)'}`);
+    return c.text(surgeList);
+    
+  } catch (error) {
+    console.error(`Error processing ${nameWithFilter}:`, error);
+    throw new HTTPException(500, {
+      message: `Failed to process request: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+  }
 });
 
 app.get("/geosite", async (c) => {
