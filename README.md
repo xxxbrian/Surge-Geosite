@@ -82,6 +82,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | alibaba-ads | https://surge.bojin.co/geosite/alibaba-ads |
 | alibabacloud | https://surge.bojin.co/geosite/alibabacloud |
 | aliyun | https://surge.bojin.co/geosite/aliyun |
+| aliyun-drive | https://surge.bojin.co/geosite/aliyun-drive |
 | aljazeera | https://surge.bojin.co/geosite/aljazeera |
 | amap | https://surge.bojin.co/geosite/amap |
 | amazon | https://surge.bojin.co/geosite/amazon |
@@ -350,6 +351,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | clubhouse | https://surge.bojin.co/geosite/clubhouse |
 | cmb | https://surge.bojin.co/geosite/cmb |
 | cn | https://surge.bojin.co/geosite/cn |
+| cnb | https://surge.bojin.co/geosite/cnb |
 | cnbc | https://surge.bojin.co/geosite/cnbc |
 | cnbeta | https://surge.bojin.co/geosite/cnbeta |
 | cnblogs | https://surge.bojin.co/geosite/cnblogs |
@@ -368,6 +370,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | connectivity-check | https://surge.bojin.co/geosite/connectivity-check |
 | contentful | https://surge.bojin.co/geosite/contentful |
 | coolapk | https://surge.bojin.co/geosite/coolapk |
+| coomer | https://surge.bojin.co/geosite/coomer |
 | copymanga | https://surge.bojin.co/geosite/copymanga |
 | corel | https://surge.bojin.co/geosite/corel |
 | costco | https://surge.bojin.co/geosite/costco |
@@ -642,6 +645,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | huya | https://surge.bojin.co/geosite/huya |
 | ibkr | https://surge.bojin.co/geosite/ibkr |
 | ibm | https://surge.bojin.co/geosite/ibm |
+| icable | https://surge.bojin.co/geosite/icable |
 | icbc | https://surge.bojin.co/geosite/icbc |
 | icloud | https://surge.bojin.co/geosite/icloud |
 | icloudprivaterelay | https://surge.bojin.co/geosite/icloudprivaterelay |
