@@ -1427,4 +1427,3 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | zte | https://surge.bojin.co/geosite/zte |
 | zto-express | https://surge.bojin.co/geosite/zto-express |
 | zuoyebang | https://surge.bojin.co/geosite/zuoyebang |
-| zynga-ads | https://surge.bojin.co/geosite/zynga-ads |
