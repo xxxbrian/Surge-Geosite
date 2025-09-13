@@ -29,24 +29,24 @@ const formatBytes = (bytes: number, decimals = 2) => {
 const getZipETag = async (zipUrl: string): Promise<string | null> => {
   try {
     // Only fetch headers to get ETag without downloading the full ZIP
-    const response = await fetch(zipUrl, { 
+    const response = await fetch(zipUrl, {
       method: 'HEAD',
       headers: {
         'User-Agent': 'Surge-Geosite-Worker/1.0'
       }
     });
-    
+
     if (!response.ok) {
       console.warn(`Failed to get ZIP ETag: ${response.status} ${response.statusText}`);
       return null;
     }
-    
+
     const etag = response.headers.get('etag');
     if (etag) {
       // Clean up ETag (remove quotes and W/ prefix if present)
       return etag.replace(/^W\/|"/g, '');
     }
-    
+
     console.warn('No ETag found in ZIP response headers');
     return null;
   } catch (error) {
@@ -170,10 +170,13 @@ const genSurgeList = async (
       }
       if (line.startsWith("regexp:")) {
         const regexp = line.split(" ")[0].replace("regexp:", "");
+        const wildcard = regexAstToWildcard(regexp);
+        // https://github.com/xxxbrian/Surge-Geosite/issues/3
+        const skip = /^[\?\*]+$/.test(wildcard);
         return convert(
           "regexp:",
-          "DOMAIN-WILDCARD,",
-          line.replace(regexp, regexAstToWildcard(regexp))
+          skip ? "# SKIPPED-DOMAIN-WILDCARD," : "DOMAIN-WILDCARD,",
+          line.replace(regexp, wildcard)
         );
       }
       if (line.startsWith("include:")) {
