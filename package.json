@@ -5,12 +5,12 @@
     "deploy": "wrangler deploy --minify worker/index.ts"
   },
   "dependencies": {
-    "hono": "^4.5.10",
+    "hono": "^4.9.7",
     "jszip": "^3.10.1",
     "regjsparser": "^0.10.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240529.0",
-    "wrangler": "^3.57.2"
+    "@cloudflare/workers-types": "^4.20250913.0",
+    "wrangler": "^4.36.0"
   }
 }
