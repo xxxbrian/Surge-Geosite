@@ -227,6 +227,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-ai-cn | https://surge.bojin.co/geosite/category-ai-cn |
 | category-android-app-download | https://surge.bojin.co/geosite/category-android-app-download |
 | category-anticensorship | https://surge.bojin.co/geosite/category-anticensorship |
+| category-automobile-cn | https://surge.bojin.co/geosite/category-automobile-cn |
 | category-bank-cn | https://surge.bojin.co/geosite/category-bank-cn |
 | category-bank-ir | https://surge.bojin.co/geosite/category-bank-ir |
 | category-bank-jp | https://surge.bojin.co/geosite/category-bank-jp |
@@ -330,6 +331,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | chinapower | https://surge.bojin.co/geosite/chinapower |
 | chinaso | https://surge.bojin.co/geosite/chinaso |
 | chinatelecom | https://surge.bojin.co/geosite/chinatelecom |
+| chinatower | https://surge.bojin.co/geosite/chinatower |
 | chinaunicom | https://surge.bojin.co/geosite/chinaunicom |
 | chinaz | https://surge.bojin.co/geosite/chinaz |
 | chiphell | https://surge.bojin.co/geosite/chiphell |
@@ -437,6 +439,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | docin | https://surge.bojin.co/geosite/docin |
 | docker | https://surge.bojin.co/geosite/docker |
 | doi | https://surge.bojin.co/geosite/doi |
+| dongchedi | https://surge.bojin.co/geosite/dongchedi |
 | dongjiao | https://surge.bojin.co/geosite/dongjiao |
 | douban | https://surge.bojin.co/geosite/douban |
 | doubao | https://surge.bojin.co/geosite/doubao |
@@ -1373,6 +1376,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | xedge | https://surge.bojin.co/geosite/xedge |
 | xhamster | https://surge.bojin.co/geosite/xhamster |
 | xhamster-ads | https://surge.bojin.co/geosite/xhamster-ads |
+| xiaoheihe | https://surge.bojin.co/geosite/xiaoheihe |
 | xiaohongshu | https://surge.bojin.co/geosite/xiaohongshu |
 | xiaomi | https://surge.bojin.co/geosite/xiaomi |
 | xiaomi-ads | https://surge.bojin.co/geosite/xiaomi-ads |
