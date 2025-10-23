@@ -1180,6 +1180,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | steamunlocked | https://surge.bojin.co/geosite/steamunlocked |
 | steemit | https://surge.bojin.co/geosite/steemit |
 | sto-express | https://surge.bojin.co/geosite/sto-express |
+| straitsx | https://surge.bojin.co/geosite/straitsx |
 | streamable | https://surge.bojin.co/geosite/streamable |
 | strepsils | https://surge.bojin.co/geosite/strepsils |
 | strikingly | https://surge.bojin.co/geosite/strikingly |
@@ -1338,6 +1339,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wantmedia | https://surge.bojin.co/geosite/wantmedia |
 | wasu | https://surge.bojin.co/geosite/wasu |
 | watchout | https://surge.bojin.co/geosite/watchout |
+| wbgames | https://surge.bojin.co/geosite/wbgames |
 | weathercn | https://surge.bojin.co/geosite/weathercn |
 | webex | https://surge.bojin.co/geosite/webex |
 | webflow | https://surge.bojin.co/geosite/webflow |
