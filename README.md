@@ -465,6 +465,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | eastmoney | https://surge.bojin.co/geosite/eastmoney |
 | easylist | https://surge.bojin.co/geosite/easylist |
 | ebay | https://surge.bojin.co/geosite/ebay |
+| ebuyer | https://surge.bojin.co/geosite/ebuyer |
 | economist | https://surge.bojin.co/geosite/economist |
 | edx | https://surge.bojin.co/geosite/edx |
 | egghead | https://surge.bojin.co/geosite/egghead |
@@ -534,6 +535,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | foundertype | https://surge.bojin.co/geosite/foundertype |
 | fox | https://surge.bojin.co/geosite/fox |
 | fqnovel | https://surge.bojin.co/geosite/fqnovel |
+| framer | https://surge.bojin.co/geosite/framer |
 | freecodecamp | https://surge.bojin.co/geosite/freecodecamp |
 | freenode | https://surge.bojin.co/geosite/freenode |
 | ft | https://surge.bojin.co/geosite/ft |
@@ -815,6 +817,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | lysol | https://surge.bojin.co/geosite/lysol |
 | madshi | https://surge.bojin.co/geosite/madshi |
 | mafengwo | https://surge.bojin.co/geosite/mafengwo |
+| mailcom | https://surge.bojin.co/geosite/mailcom |
 | mailru | https://surge.bojin.co/geosite/mailru |
 | mainichi | https://surge.bojin.co/geosite/mainichi |
 | manhuagui | https://surge.bojin.co/geosite/manhuagui |
