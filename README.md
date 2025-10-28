@@ -931,6 +931,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | nist | https://surge.bojin.co/geosite/nist |
 | nixos | https://surge.bojin.co/geosite/nixos |
 | nodejs | https://surge.bojin.co/geosite/nodejs |
+| nodeseek | https://surge.bojin.co/geosite/nodeseek |
 | nordstrom | https://surge.bojin.co/geosite/nordstrom |
 | notion | https://surge.bojin.co/geosite/notion |
 | now | https://surge.bojin.co/geosite/now |
@@ -1376,6 +1377,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wynd | https://surge.bojin.co/geosite/wynd |
 | x | https://surge.bojin.co/geosite/x |
 | x315 | https://surge.bojin.co/geosite/x315 |
+| x5 | https://surge.bojin.co/geosite/x5 |
 | xai | https://surge.bojin.co/geosite/xai |
 | xbox | https://surge.bojin.co/geosite/xbox |
 | xd | https://surge.bojin.co/geosite/xd |
