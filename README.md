@@ -607,6 +607,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | hellofont | https://surge.bojin.co/geosite/hellofont |
 | hentaichen | https://surge.bojin.co/geosite/hentaichen |
 | hentaivn | https://surge.bojin.co/geosite/hentaivn |
+| herogame | https://surge.bojin.co/geosite/herogame |
 | heroku | https://surge.bojin.co/geosite/heroku |
 | hetzner | https://surge.bojin.co/geosite/hetzner |
 | heytea | https://surge.bojin.co/geosite/heytea |
