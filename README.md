@@ -1113,6 +1113,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | segmentfault | https://surge.bojin.co/geosite/segmentfault |
 | sehuatang | https://surge.bojin.co/geosite/sehuatang |
 | sensorsdata-ads | https://surge.bojin.co/geosite/sensorsdata-ads |
+| sentry | https://surge.bojin.co/geosite/sentry |
 | setapp | https://surge.bojin.co/geosite/setapp |
 | setn | https://surge.bojin.co/geosite/setn |
 | sf-express | https://surge.bojin.co/geosite/sf-express |
