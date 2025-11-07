@@ -440,6 +440,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | docin | https://surge.bojin.co/geosite/docin |
 | docker | https://surge.bojin.co/geosite/docker |
 | doi | https://surge.bojin.co/geosite/doi |
+| dola | https://surge.bojin.co/geosite/dola |
 | dongchedi | https://surge.bojin.co/geosite/dongchedi |
 | dongjiao | https://surge.bojin.co/geosite/dongjiao |
 | douban | https://surge.bojin.co/geosite/douban |
@@ -472,6 +473,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ehentai | https://surge.bojin.co/geosite/ehentai |
 | electron | https://surge.bojin.co/geosite/electron |
 | eleme | https://surge.bojin.co/geosite/eleme |
+| elevenlabs | https://surge.bojin.co/geosite/elevenlabs |
 | elsevier | https://surge.bojin.co/geosite/elsevier |
 | embedly | https://surge.bojin.co/geosite/embedly |
 | embl | https://surge.bojin.co/geosite/embl |
@@ -541,6 +543,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | freenode | https://surge.bojin.co/geosite/freenode |
 | ft | https://surge.bojin.co/geosite/ft |
 | ftv | https://surge.bojin.co/geosite/ftv |
+| futu | https://surge.bojin.co/geosite/futu |
 | fzdm | https://surge.bojin.co/geosite/fzdm |
 | gamersky | https://surge.bojin.co/geosite/gamersky |
 | gandi | https://surge.bojin.co/geosite/gandi |
@@ -702,6 +705,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | isgd | https://surge.bojin.co/geosite/isgd |
 | ishumei | https://surge.bojin.co/geosite/ishumei |
 | itchio | https://surge.bojin.co/geosite/itchio |
+| itiger | https://surge.bojin.co/geosite/itiger |
 | itunes | https://surge.bojin.co/geosite/itunes |
 | ixsystems | https://surge.bojin.co/geosite/ixsystems |
 | iyf | https://surge.bojin.co/geosite/iyf |
@@ -1104,6 +1108,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | scala | https://surge.bojin.co/geosite/scala |
 | scaleflex | https://surge.bojin.co/geosite/scaleflex |
 | scenesource | https://surge.bojin.co/geosite/scenesource |
+| schwab | https://surge.bojin.co/geosite/schwab |
 | sci | https://surge.bojin.co/geosite/sci |
 | sci-hub | https://surge.bojin.co/geosite/sci-hub |
 | sciencedirect | https://surge.bojin.co/geosite/sciencedirect |
