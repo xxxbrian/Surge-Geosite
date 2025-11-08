@@ -161,6 +161,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | bethesda | https://surge.bojin.co/geosite/bethesda |
 | betterexplained | https://surge.bojin.co/geosite/betterexplained |
 | bilibili | https://surge.bojin.co/geosite/bilibili |
+| bilibili-cdn | https://surge.bojin.co/geosite/bilibili-cdn |
 | bilibili-game | https://surge.bojin.co/geosite/bilibili-game |
 | bilibili2 | https://surge.bojin.co/geosite/bilibili2 |
 | binance | https://surge.bojin.co/geosite/binance |
