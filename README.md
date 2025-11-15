@@ -127,7 +127,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | atom-data-ads | https://surge.bojin.co/geosite/atom-data-ads |
 | att | https://surge.bojin.co/geosite/att |
 | attwatchtv | https://surge.bojin.co/geosite/attwatchtv |
-| authy | https://surge.bojin.co/geosite/authy |
 | autodesk | https://surge.bojin.co/geosite/autodesk |
 | avaxhome | https://surge.bojin.co/geosite/avaxhome |
 | avmoo | https://surge.bojin.co/geosite/avmoo |
@@ -663,7 +662,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | illusion-nonofficial | https://surge.bojin.co/geosite/illusion-nonofficial |
 | imagebam | https://surge.bojin.co/geosite/imagebam |
 | imagecurl | https://surge.bojin.co/geosite/imagecurl |
-| imageglass | https://surge.bojin.co/geosite/imageglass |
 | imageshack | https://surge.bojin.co/geosite/imageshack |
 | imagetwist | https://surge.bojin.co/geosite/imagetwist |
 | imdb | https://surge.bojin.co/geosite/imdb |
@@ -867,7 +865,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | movefree | https://surge.bojin.co/geosite/movefree |
 | moxing | https://surge.bojin.co/geosite/moxing |
 | mozilla | https://surge.bojin.co/geosite/mozilla |
-| mpv | https://surge.bojin.co/geosite/mpv |
 | msi | https://surge.bojin.co/geosite/msi |
 | msn | https://surge.bojin.co/geosite/msn |
 | mubi | https://surge.bojin.co/geosite/mubi |
