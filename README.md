@@ -681,6 +681,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | intel-dev | https://surge.bojin.co/geosite/intel-dev |
 | intercom | https://surge.bojin.co/geosite/intercom |
 | intsig | https://surge.bojin.co/geosite/intsig |
+| intuit | https://surge.bojin.co/geosite/intuit |
 | ipip | https://surge.bojin.co/geosite/ipip |
 | iqiyi | https://surge.bojin.co/geosite/iqiyi |
 | iqiyi-ads | https://surge.bojin.co/geosite/iqiyi-ads |
@@ -1376,7 +1377,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | xvideos | https://surge.bojin.co/geosite/xvideos |
 | yahoo | https://surge.bojin.co/geosite/yahoo |
 | yahoo-ads | https://surge.bojin.co/geosite/yahoo-ads |
-| yamibo | https://surge.bojin.co/geosite/yamibo |
 | yandex | https://surge.bojin.co/geosite/yandex |
 | ycombinator | https://surge.bojin.co/geosite/ycombinator |
 | ymtc | https://surge.bojin.co/geosite/ymtc |
