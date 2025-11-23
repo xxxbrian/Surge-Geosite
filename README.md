@@ -238,6 +238,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-companies | https://surge.bojin.co/geosite/category-companies |
 | category-container | https://surge.bojin.co/geosite/category-container |
 | category-cryptocurrency | https://surge.bojin.co/geosite/category-cryptocurrency |
+| category-ddns | https://surge.bojin.co/geosite/category-ddns |
 | category-dev | https://surge.bojin.co/geosite/category-dev |
 | category-dev-cn | https://surge.bojin.co/geosite/category-dev-cn |
 | category-documents-cn | https://surge.bojin.co/geosite/category-documents-cn |
@@ -264,6 +265,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-hospital-cn | https://surge.bojin.co/geosite/category-hospital-cn |
 | category-httpdns-cn | https://surge.bojin.co/geosite/category-httpdns-cn |
 | category-insurance-ir | https://surge.bojin.co/geosite/category-insurance-ir |
+| category-ip-geo-detect | https://surge.bojin.co/geosite/category-ip-geo-detect |
 | category-ipfs | https://surge.bojin.co/geosite/category-ipfs |
 | category-ir | https://surge.bojin.co/geosite/category-ir |
 | category-logistics-cn | https://surge.bojin.co/geosite/category-logistics-cn |
@@ -346,6 +348,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | cloudflare-cn | https://surge.bojin.co/geosite/cloudflare-cn |
 | cloudflare-ipfs | https://surge.bojin.co/geosite/cloudflare-ipfs |
 | cloudinary | https://surge.bojin.co/geosite/cloudinary |
+| cloudns | https://surge.bojin.co/geosite/cloudns |
 | clubhouse | https://surge.bojin.co/geosite/clubhouse |
 | cmb | https://surge.bojin.co/geosite/cmb |
 | cn | https://surge.bojin.co/geosite/cn |
@@ -453,6 +456,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | dw | https://surge.bojin.co/geosite/dw |
 | dwion | https://surge.bojin.co/geosite/dwion |
 | dyna | https://surge.bojin.co/geosite/dyna |
+| dynu | https://surge.bojin.co/geosite/dynu |
 | ea | https://surge.bojin.co/geosite/ea |
 | eastmoney | https://surge.bojin.co/geosite/eastmoney |
 | easylist | https://surge.bojin.co/geosite/easylist |
@@ -913,6 +917,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | nixos | https://surge.bojin.co/geosite/nixos |
 | nodejs | https://surge.bojin.co/geosite/nodejs |
 | nodeseek | https://surge.bojin.co/geosite/nodeseek |
+| noip | https://surge.bojin.co/geosite/noip |
 | nordstrom | https://surge.bojin.co/geosite/nordstrom |
 | notion | https://surge.bojin.co/geosite/notion |
 | now | https://surge.bojin.co/geosite/now |
