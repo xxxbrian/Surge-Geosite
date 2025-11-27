@@ -1387,6 +1387,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ymtc | https://surge.bojin.co/geosite/ymtc |
 | ynet | https://surge.bojin.co/geosite/ynet |
 | ynoproject | https://surge.bojin.co/geosite/ynoproject |
+| yokaverse | https://surge.bojin.co/geosite/yokaverse |
 | yomiuri | https://surge.bojin.co/geosite/yomiuri |
 | youjizz | https://surge.bojin.co/geosite/youjizz |
 | youku | https://surge.bojin.co/geosite/youku |
@@ -1416,6 +1417,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | zhangtao | https://surge.bojin.co/geosite/zhangtao |
 | zhihu | https://surge.bojin.co/geosite/zhihu |
 | zhimeishe | https://surge.bojin.co/geosite/zhimeishe |
+| zhubajie | https://surge.bojin.co/geosite/zhubajie |
 | ziroom | https://surge.bojin.co/geosite/ziroom |
 | zoho | https://surge.bojin.co/geosite/zoho |
 | zoom | https://surge.bojin.co/geosite/zoom |
