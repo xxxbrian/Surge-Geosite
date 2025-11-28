@@ -367,6 +367,8 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | coinone | https://surge.bojin.co/geosite/coinone |
 | collabora | https://surge.bojin.co/geosite/collabora |
 | colorfulclouds | https://surge.bojin.co/geosite/colorfulclouds |
+| comfy | https://surge.bojin.co/geosite/comfy |
+| comfy-ui-launcher | https://surge.bojin.co/geosite/comfy-ui-launcher |
 | comodo | https://surge.bojin.co/geosite/comodo |
 | connectivity-check | https://surge.bojin.co/geosite/connectivity-check |
 | contentful | https://surge.bojin.co/geosite/contentful |
@@ -1061,6 +1063,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | reuters | https://surge.bojin.co/geosite/reuters |
 | rferl | https://surge.bojin.co/geosite/rferl |
 | riot | https://surge.bojin.co/geosite/riot |
+| roblox | https://surge.bojin.co/geosite/roblox |
 | rockstar | https://surge.bojin.co/geosite/rockstar |
 | roku | https://surge.bojin.co/geosite/roku |
 | rsshub | https://surge.bojin.co/geosite/rsshub |
