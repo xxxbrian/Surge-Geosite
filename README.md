@@ -340,7 +340,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ck101 | https://surge.bojin.co/geosite/ck101 |
 | clarivate | https://surge.bojin.co/geosite/clarivate |
 | clearasil | https://surge.bojin.co/geosite/clearasil |
-| clearbitjs-ads | https://surge.bojin.co/geosite/clearbitjs-ads |
+| clearbit-ads | https://surge.bojin.co/geosite/clearbit-ads |
 | clips4sale | https://surge.bojin.co/geosite/clips4sale |
 | cloudcone | https://surge.bojin.co/geosite/cloudcone |
 | cloudconvert | https://surge.bojin.co/geosite/cloudconvert |
@@ -776,7 +776,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | launchpad | https://surge.bojin.co/geosite/launchpad |
 | lavteam | https://surge.bojin.co/geosite/lavteam |
 | le | https://surge.bojin.co/geosite/le |
-| leanplum-ads | https://surge.bojin.co/geosite/leanplum-ads |
 | lenovo | https://surge.bojin.co/geosite/lenovo |
 | lethalhardcore | https://surge.bojin.co/geosite/lethalhardcore |
 | letsencrypt | https://surge.bojin.co/geosite/letsencrypt |
@@ -857,7 +856,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | misskey | https://surge.bojin.co/geosite/misskey |
 | misskey-universe | https://surge.bojin.co/geosite/misskey-universe |
 | mit | https://surge.bojin.co/geosite/mit |
-| mixpanel-ads | https://surge.bojin.co/geosite/mixpanel-ads |
 | mobile01 | https://surge.bojin.co/geosite/mobile01 |
 | mocha | https://surge.bojin.co/geosite/mocha |
 | mogujie | https://surge.bojin.co/geosite/mogujie |
@@ -943,7 +941,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | onedrive | https://surge.bojin.co/geosite/onedrive |
 | onekey | https://surge.bojin.co/geosite/onekey |
 | oneplus | https://surge.bojin.co/geosite/oneplus |
-| onesignal-ads | https://surge.bojin.co/geosite/onesignal-ads |
 | ookla-speedtest | https://surge.bojin.co/geosite/ookla-speedtest |
 | ookla-speedtest-ads | https://surge.bojin.co/geosite/ookla-speedtest-ads |
 | op | https://surge.bojin.co/geosite/op |
@@ -1264,7 +1261,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | tumblr | https://surge.bojin.co/geosite/tumblr |
 | tutanota | https://surge.bojin.co/geosite/tutanota |
 | tvb | https://surge.bojin.co/geosite/tvb |
-| tvdb | https://surge.bojin.co/geosite/tvdb |
 | tver | https://surge.bojin.co/geosite/tver |
 | twca | https://surge.bojin.co/geosite/twca |
 | twitch | https://surge.bojin.co/geosite/twitch |
@@ -1357,7 +1353,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wordpress | https://surge.bojin.co/geosite/wordpress |
 | wps | https://surge.bojin.co/geosite/wps |
 | wsj | https://surge.bojin.co/geosite/wsj |
-| wteam-ads | https://surge.bojin.co/geosite/wteam-ads |
 | wwe | https://surge.bojin.co/geosite/wwe |
 | wynd | https://surge.bojin.co/geosite/wynd |
 | x | https://surge.bojin.co/geosite/x |
