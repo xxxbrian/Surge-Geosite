@@ -936,6 +936,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ok | https://surge.bojin.co/geosite/ok |
 | okaapps | https://surge.bojin.co/geosite/okaapps |
 | okjike | https://surge.bojin.co/geosite/okjike |
+| okko | https://surge.bojin.co/geosite/okko |
 | okx | https://surge.bojin.co/geosite/okx |
 | olevod | https://surge.bojin.co/geosite/olevod |
 | onedrive | https://surge.bojin.co/geosite/onedrive |
@@ -1261,6 +1262,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | tumblr | https://surge.bojin.co/geosite/tumblr |
 | tutanota | https://surge.bojin.co/geosite/tutanota |
 | tvb | https://surge.bojin.co/geosite/tvb |
+| tvdb | https://surge.bojin.co/geosite/tvdb |
 | tver | https://surge.bojin.co/geosite/tver |
 | twca | https://surge.bojin.co/geosite/twca |
 | twitch | https://surge.bojin.co/geosite/twitch |
