@@ -37,6 +37,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | 5ch | https://surge.bojin.co/geosite/5ch |
 | 6park | https://surge.bojin.co/geosite/6park |
 | 75team | https://surge.bojin.co/geosite/75team |
+| 7tv | https://surge.bojin.co/geosite/7tv |
 | 800best | https://surge.bojin.co/geosite/800best |
 | 8btc | https://surge.bojin.co/geosite/8btc |
 | 928plus | https://surge.bojin.co/geosite/928plus |
@@ -591,6 +592,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | gucci | https://surge.bojin.co/geosite/gucci |
 | guo | https://surge.bojin.co/geosite/guo |
 | guokr | https://surge.bojin.co/geosite/guokr |
+| habr | https://surge.bojin.co/geosite/habr |
 | haier | https://surge.bojin.co/geosite/haier |
 | hainanairlines | https://surge.bojin.co/geosite/hainanairlines |
 | haitang | https://surge.bojin.co/geosite/haitang |
@@ -838,6 +840,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | meta | https://surge.bojin.co/geosite/meta |
 | meta-ads | https://surge.bojin.co/geosite/meta-ads |
 | metabrainz | https://surge.bojin.co/geosite/metabrainz |
+| metacritic | https://surge.bojin.co/geosite/metacritic |
 | metart | https://surge.bojin.co/geosite/metart |
 | miaomiaozhe | https://surge.bojin.co/geosite/miaomiaozhe |
 | microsoft | https://surge.bojin.co/geosite/microsoft |
@@ -858,6 +861,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mit | https://surge.bojin.co/geosite/mit |
 | mobile01 | https://surge.bojin.co/geosite/mobile01 |
 | mocha | https://surge.bojin.co/geosite/mocha |
+| modrinth | https://surge.bojin.co/geosite/modrinth |
 | mogujie | https://surge.bojin.co/geosite/mogujie |
 | mojang | https://surge.bojin.co/geosite/mojang |
 | moji | https://surge.bojin.co/geosite/moji |
@@ -1075,6 +1079,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | rust | https://surge.bojin.co/geosite/rust |
 | ruten | https://surge.bojin.co/geosite/ruten |
 | rutracker | https://surge.bojin.co/geosite/rutracker |
+| rutube | https://surge.bojin.co/geosite/rutube |
 | sakurafrp | https://surge.bojin.co/geosite/sakurafrp |
 | salesforce | https://surge.bojin.co/geosite/salesforce |
 | samsung | https://surge.bojin.co/geosite/samsung |
@@ -1207,6 +1212,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | telegram | https://surge.bojin.co/geosite/telegram |
 | telekom | https://surge.bojin.co/geosite/telekom |
 | television-ads | https://surge.bojin.co/geosite/television-ads |
+| temp-mail | https://surge.bojin.co/geosite/temp-mail |
 | tencent | https://surge.bojin.co/geosite/tencent |
 | tencent-ads | https://surge.bojin.co/geosite/tencent-ads |
 | tencent-dev | https://surge.bojin.co/geosite/tencent-dev |
@@ -1301,6 +1307,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | verisign-pki | https://surge.bojin.co/geosite/verisign-pki |
 | verizon | https://surge.bojin.co/geosite/verizon |
 | vgtime | https://surge.bojin.co/geosite/vgtime |
+| viber | https://surge.bojin.co/geosite/viber |
 | vilavpn | https://surge.bojin.co/geosite/vilavpn |
 | vim | https://surge.bojin.co/geosite/vim |
 | vimeo | https://surge.bojin.co/geosite/vimeo |
