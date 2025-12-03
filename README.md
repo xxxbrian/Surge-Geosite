@@ -534,6 +534,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | forza | https://surge.bojin.co/geosite/forza |
 | fox | https://surge.bojin.co/geosite/fox |
 | fqnovel | https://surge.bojin.co/geosite/fqnovel |
+| fqnovel-ads | https://surge.bojin.co/geosite/fqnovel-ads |
 | framer | https://surge.bojin.co/geosite/framer |
 | freecodecamp | https://surge.bojin.co/geosite/freecodecamp |
 | freenode | https://surge.bojin.co/geosite/freenode |
@@ -1378,6 +1379,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | xiaohongshu | https://surge.bojin.co/geosite/xiaohongshu |
 | xiaomi | https://surge.bojin.co/geosite/xiaomi |
 | xiaomi-ads | https://surge.bojin.co/geosite/xiaomi-ads |
+| xiaoyuzhou | https://surge.bojin.co/geosite/xiaoyuzhou |
 | ximalaya | https://surge.bojin.co/geosite/ximalaya |
 | ximalaya-ads | https://surge.bojin.co/geosite/ximalaya-ads |
 | xingkongwuxianmedia | https://surge.bojin.co/geosite/xingkongwuxianmedia |
