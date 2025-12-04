@@ -460,6 +460,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | dwion | https://surge.bojin.co/geosite/dwion |
 | dyna | https://surge.bojin.co/geosite/dyna |
 | dynu | https://surge.bojin.co/geosite/dynu |
+| dzen | https://surge.bojin.co/geosite/dzen |
 | ea | https://surge.bojin.co/geosite/ea |
 | eastmoney | https://surge.bojin.co/geosite/eastmoney |
 | easylist | https://surge.bojin.co/geosite/easylist |
@@ -815,6 +816,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mafengwo | https://surge.bojin.co/geosite/mafengwo |
 | mailcom | https://surge.bojin.co/geosite/mailcom |
 | mailru | https://surge.bojin.co/geosite/mailru |
+| mailru-group | https://surge.bojin.co/geosite/mailru-group |
 | mainichi | https://surge.bojin.co/geosite/mainichi |
 | manhuagui | https://surge.bojin.co/geosite/manhuagui |
 | manorama | https://surge.bojin.co/geosite/manorama |
