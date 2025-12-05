@@ -243,6 +243,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-dev | https://surge.bojin.co/geosite/category-dev |
 | category-dev-cn | https://surge.bojin.co/geosite/category-dev-cn |
 | category-documents-cn | https://surge.bojin.co/geosite/category-documents-cn |
+| category-doh | https://surge.bojin.co/geosite/category-doh |
 | category-ecommerce | https://surge.bojin.co/geosite/category-ecommerce |
 | category-education-cn | https://surge.bojin.co/geosite/category-education-cn |
 | category-education-ir | https://surge.bojin.co/geosite/category-education-ir |
