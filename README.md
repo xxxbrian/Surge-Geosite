@@ -1433,6 +1433,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ziroom | https://surge.bojin.co/geosite/ziroom |
 | zoho | https://surge.bojin.co/geosite/zoho |
 | zoom | https://surge.bojin.co/geosite/zoom |
+| zotero | https://surge.bojin.co/geosite/zotero |
 | zte | https://surge.bojin.co/geosite/zte |
 | zto-express | https://surge.bojin.co/geosite/zto-express |
 | zuoyebang | https://surge.bojin.co/geosite/zuoyebang |
