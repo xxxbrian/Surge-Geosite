@@ -475,6 +475,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | eleme | https://surge.bojin.co/geosite/eleme |
 | elevenlabs | https://surge.bojin.co/geosite/elevenlabs |
 | elsevier | https://surge.bojin.co/geosite/elsevier |
+| embark | https://surge.bojin.co/geosite/embark |
 | embedly | https://surge.bojin.co/geosite/embedly |
 | embl | https://surge.bojin.co/geosite/embl |
 | emogi-ads | https://surge.bojin.co/geosite/emogi-ads |
@@ -498,6 +499,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | facebook | https://surge.bojin.co/geosite/facebook |
 | facebook-ads | https://surge.bojin.co/geosite/facebook-ads |
 | facebook-dev | https://surge.bojin.co/geosite/facebook-dev |
+| faceit | https://surge.bojin.co/geosite/faceit |
 | falungong | https://surge.bojin.co/geosite/falungong |
 | familymart | https://surge.bojin.co/geosite/familymart |
 | fandom | https://surge.bojin.co/geosite/fandom |
