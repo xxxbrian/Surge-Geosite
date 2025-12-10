@@ -36,7 +36,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | 58tongcheng | https://surge.bojin.co/geosite/58tongcheng |
 | 5ch | https://surge.bojin.co/geosite/5ch |
 | 6park | https://surge.bojin.co/geosite/6park |
-| 75team | https://surge.bojin.co/geosite/75team |
 | 7tv | https://surge.bojin.co/geosite/7tv |
 | 800best | https://surge.bojin.co/geosite/800best |
 | 8btc | https://surge.bojin.co/geosite/8btc |
@@ -609,7 +608,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | haveibeenpwned | https://surge.bojin.co/geosite/haveibeenpwned |
 | hbo | https://surge.bojin.co/geosite/hbo |
 | hcaptcha | https://surge.bojin.co/geosite/hcaptcha |
-| hellofont | https://surge.bojin.co/geosite/hellofont |
 | hentaichen | https://surge.bojin.co/geosite/hentaichen |
 | hentaivn | https://surge.bojin.co/geosite/hentaivn |
 | herogame | https://surge.bojin.co/geosite/herogame |
