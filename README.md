@@ -1019,6 +1019,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | pptv | https://surge.bojin.co/geosite/pptv |
 | primevideo | https://surge.bojin.co/geosite/primevideo |
 | private | https://surge.bojin.co/geosite/private |
+| projectpoi | https://surge.bojin.co/geosite/projectpoi |
 | projectsekai | https://surge.bojin.co/geosite/projectsekai |
 | proquest | https://surge.bojin.co/geosite/proquest |
 | protonmail | https://surge.bojin.co/geosite/protonmail |
