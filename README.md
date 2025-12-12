@@ -306,6 +306,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-speedtest | https://surge.bojin.co/geosite/category-speedtest |
 | category-tech-ir | https://surge.bojin.co/geosite/category-tech-ir |
 | category-tech-media | https://surge.bojin.co/geosite/category-tech-media |
+| category-tm | https://surge.bojin.co/geosite/category-tm |
 | category-travel-ir | https://surge.bojin.co/geosite/category-travel-ir |
 | category-voip | https://surge.bojin.co/geosite/category-voip |
 | category-vpnservices | https://surge.bojin.co/geosite/category-vpnservices |
@@ -565,6 +566,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | gitbook | https://surge.bojin.co/geosite/gitbook |
 | gitee | https://surge.bojin.co/geosite/gitee |
 | github | https://surge.bojin.co/geosite/github |
+| github-ads | https://surge.bojin.co/geosite/github-ads |
 | github1s | https://surge.bojin.co/geosite/github1s |
 | gitlab | https://surge.bojin.co/geosite/gitlab |
 | gitv | https://surge.bojin.co/geosite/gitv |
