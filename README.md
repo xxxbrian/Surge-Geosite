@@ -82,6 +82,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | aliyun-drive | https://surge.bojin.co/geosite/aliyun-drive |
 | aljazeera | https://surge.bojin.co/geosite/aljazeera |
 | amap | https://surge.bojin.co/geosite/amap |
+| amap-ads | https://surge.bojin.co/geosite/amap-ads |
 | amazon | https://surge.bojin.co/geosite/amazon |
 | amazon-ads | https://surge.bojin.co/geosite/amazon-ads |
 | amazontrust | https://surge.bojin.co/geosite/amazontrust |
@@ -852,10 +853,12 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | metart | https://surge.bojin.co/geosite/metart |
 | miaomiaozhe | https://surge.bojin.co/geosite/miaomiaozhe |
 | microsoft | https://surge.bojin.co/geosite/microsoft |
+| microsoft-ads | https://surge.bojin.co/geosite/microsoft-ads |
 | microsoft-dev | https://surge.bojin.co/geosite/microsoft-dev |
 | microsoft-pki | https://surge.bojin.co/geosite/microsoft-pki |
 | midea | https://surge.bojin.co/geosite/midea |
 | mihoyo | https://surge.bojin.co/geosite/mihoyo |
+| mihoyo-ads | https://surge.bojin.co/geosite/mihoyo-ads |
 | mihoyo-cn | https://surge.bojin.co/geosite/mihoyo-cn |
 | mikrotik | https://surge.bojin.co/geosite/mikrotik |
 | mindgeek | https://surge.bojin.co/geosite/mindgeek |
@@ -1433,6 +1436,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | zeplin | https://surge.bojin.co/geosite/zeplin |
 | zhangtao | https://surge.bojin.co/geosite/zhangtao |
 | zhihu | https://surge.bojin.co/geosite/zhihu |
+| zhihu-ads | https://surge.bojin.co/geosite/zhihu-ads |
 | zhimeishe | https://surge.bojin.co/geosite/zhimeishe |
 | zhubajie | https://surge.bojin.co/geosite/zhubajie |
 | ziroom | https://surge.bojin.co/geosite/ziroom |
