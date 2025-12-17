@@ -392,6 +392,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | csis | https://surge.bojin.co/geosite/csis |
 | ctexcel | https://surge.bojin.co/geosite/ctexcel |
 | ctrip | https://surge.bojin.co/geosite/ctrip |
+| ctyun | https://surge.bojin.co/geosite/ctyun |
 | cuinc | https://surge.bojin.co/geosite/cuinc |
 | curseforge | https://surge.bojin.co/geosite/curseforge |
 | cursor | https://surge.bojin.co/geosite/cursor |
@@ -997,6 +998,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | pgyer | https://surge.bojin.co/geosite/pgyer |
 | phoenix | https://surge.bojin.co/geosite/phoenix |
 | picacg | https://surge.bojin.co/geosite/picacg |
+| picacg-ads | https://surge.bojin.co/geosite/picacg-ads |
 | picsee | https://surge.bojin.co/geosite/picsee |
 | pikpak | https://surge.bojin.co/geosite/pikpak |
 | pinduoduo | https://surge.bojin.co/geosite/pinduoduo |
@@ -1362,6 +1364,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wikihow | https://surge.bojin.co/geosite/wikihow |
 | wikimedia | https://surge.bojin.co/geosite/wikimedia |
 | windy | https://surge.bojin.co/geosite/windy |
+| wink | https://surge.bojin.co/geosite/wink |
 | wise | https://surge.bojin.co/geosite/wise |
 | wisekey | https://surge.bojin.co/geosite/wisekey |
 | wish | https://surge.bojin.co/geosite/wish |
