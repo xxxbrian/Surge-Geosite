@@ -1393,6 +1393,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | xiaohongshu | https://surge.bojin.co/geosite/xiaohongshu |
 | xiaomi | https://surge.bojin.co/geosite/xiaomi |
 | xiaomi-ads | https://surge.bojin.co/geosite/xiaomi-ads |
+| xiaomi-ai | https://surge.bojin.co/geosite/xiaomi-ai |
 | xiaoyuzhou | https://surge.bojin.co/geosite/xiaoyuzhou |
 | ximalaya | https://surge.bojin.co/geosite/ximalaya |
 | ximalaya-ads | https://surge.bojin.co/geosite/ximalaya-ads |
