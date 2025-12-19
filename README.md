@@ -880,6 +880,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | momo | https://surge.bojin.co/geosite/momo |
 | mongodb | https://surge.bojin.co/geosite/mongodb |
 | monotype | https://surge.bojin.co/geosite/monotype |
+| moonvy | https://surge.bojin.co/geosite/moonvy |
 | mopub-ads | https://surge.bojin.co/geosite/mopub-ads |
 | morisawa | https://surge.bojin.co/geosite/morisawa |
 | mortein | https://surge.bojin.co/geosite/mortein |
