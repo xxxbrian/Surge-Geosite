@@ -118,10 +118,12 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | aptoide | https://surge.bojin.co/geosite/aptoide |
 | archive | https://surge.bojin.co/geosite/archive |
 | archiveofourown | https://surge.bojin.co/geosite/archiveofourown |
+| archivetoday | https://surge.bojin.co/geosite/archivetoday |
 | archlinux | https://surge.bojin.co/geosite/archlinux |
 | arphic | https://surge.bojin.co/geosite/arphic |
 | artstation | https://surge.bojin.co/geosite/artstation |
 | asahi | https://surge.bojin.co/geosite/asahi |
+| askdiandian | https://surge.bojin.co/geosite/askdiandian |
 | asobo | https://surge.bojin.co/geosite/asobo |
 | asproex | https://surge.bojin.co/geosite/asproex |
 | asus | https://surge.bojin.co/geosite/asus |
@@ -131,6 +133,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | attwatchtv | https://surge.bojin.co/geosite/attwatchtv |
 | autodesk | https://surge.bojin.co/geosite/autodesk |
 | avaxhome | https://surge.bojin.co/geosite/avaxhome |
+| avito | https://surge.bojin.co/geosite/avito |
 | avmoo | https://surge.bojin.co/geosite/avmoo |
 | awempire | https://surge.bojin.co/geosite/awempire |
 | aws | https://surge.bojin.co/geosite/aws |
@@ -313,6 +316,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-travel-ir | https://surge.bojin.co/geosite/category-travel-ir |
 | category-voip | https://surge.bojin.co/geosite/category-voip |
 | category-vpnservices | https://surge.bojin.co/geosite/category-vpnservices |
+| category-web-archive | https://surge.bojin.co/geosite/category-web-archive |
 | category-wiki-cn | https://surge.bojin.co/geosite/category-wiki-cn |
 | cavporn | https://surge.bojin.co/geosite/cavporn |
 | cbs | https://surge.bojin.co/geosite/cbs |
@@ -412,6 +416,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | dedao | https://surge.bojin.co/geosite/dedao |
 | deepin | https://surge.bojin.co/geosite/deepin |
 | deepseek | https://surge.bojin.co/geosite/deepseek |
+| deezer | https://surge.bojin.co/geosite/deezer |
 | dell | https://surge.bojin.co/geosite/dell |
 | demonoid | https://surge.bojin.co/geosite/demonoid |
 | deppon | https://surge.bojin.co/geosite/deppon |
@@ -434,6 +439,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | dji | https://surge.bojin.co/geosite/dji |
 | dlercloud | https://surge.bojin.co/geosite/dlercloud |
 | dlsite | https://surge.bojin.co/geosite/dlsite |
+| dmit | https://surge.bojin.co/geosite/dmit |
 | dmm | https://surge.bojin.co/geosite/dmm |
 | dmm-ads | https://surge.bojin.co/geosite/dmm-ads |
 | dmm-porn | https://surge.bojin.co/geosite/dmm-porn |
@@ -697,6 +703,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | intel | https://surge.bojin.co/geosite/intel |
 | intel-dev | https://surge.bojin.co/geosite/intel-dev |
 | intercom | https://surge.bojin.co/geosite/intercom |
+| internet-archive | https://surge.bojin.co/geosite/internet-archive |
 | intsig | https://surge.bojin.co/geosite/intsig |
 | intuit | https://surge.bojin.co/geosite/intuit |
 | ipip | https://surge.bojin.co/geosite/ipip |
