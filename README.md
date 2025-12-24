@@ -1361,7 +1361,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wbgames | https://surge.bojin.co/geosite/wbgames |
 | weathercn | https://surge.bojin.co/geosite/weathercn |
 | webex | https://surge.bojin.co/geosite/webex |
-| webflow | https://surge.bojin.co/geosite/webflow |
 | webnovel | https://surge.bojin.co/geosite/webnovel |
 | webtype | https://surge.bojin.co/geosite/webtype |
 | weiphone | https://surge.bojin.co/geosite/weiphone |
