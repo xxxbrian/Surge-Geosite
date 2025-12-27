@@ -627,6 +627,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | hetzner | https://surge.bojin.co/geosite/hetzner |
 | heyzo | https://surge.bojin.co/geosite/heyzo |
 | hiido-ads | https://surge.bojin.co/geosite/hiido-ads |
+| hikvision | https://surge.bojin.co/geosite/hikvision |
 | hinet | https://surge.bojin.co/geosite/hinet |
 | hinet-eca | https://surge.bojin.co/geosite/hinet-eca |
 | hitun | https://surge.bojin.co/geosite/hitun |
