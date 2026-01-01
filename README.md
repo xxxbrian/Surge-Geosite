@@ -239,6 +239,8 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-bourse-ir | https://surge.bojin.co/geosite/category-bourse-ir |
 | category-browser-!cn | https://surge.bojin.co/geosite/category-browser-!cn |
 | category-cas | https://surge.bojin.co/geosite/category-cas |
+| category-cdn-!cn | https://surge.bojin.co/geosite/category-cdn-!cn |
+| category-cdn-cn | https://surge.bojin.co/geosite/category-cdn-cn |
 | category-collaborate-cn | https://surge.bojin.co/geosite/category-collaborate-cn |
 | category-communication | https://surge.bojin.co/geosite/category-communication |
 | category-companies | https://surge.bojin.co/geosite/category-companies |
