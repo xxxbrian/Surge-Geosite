@@ -201,6 +201,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | broadcom | https://surge.bojin.co/geosite/broadcom |
 | btdig | https://surge.bojin.co/geosite/btdig |
 | bttzyw | https://surge.bojin.co/geosite/bttzyw |
+| bushiroad | https://surge.bojin.co/geosite/bushiroad |
 | buymeacoffee | https://surge.bojin.co/geosite/buymeacoffee |
 | buypass | https://surge.bojin.co/geosite/buypass |
 | bybit | https://surge.bojin.co/geosite/bybit |
