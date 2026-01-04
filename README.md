@@ -1376,6 +1376,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wikidot | https://surge.bojin.co/geosite/wikidot |
 | wikihow | https://surge.bojin.co/geosite/wikihow |
 | wikimedia | https://surge.bojin.co/geosite/wikimedia |
+| wildberries | https://surge.bojin.co/geosite/wildberries |
 | windy | https://surge.bojin.co/geosite/windy |
 | wink | https://surge.bojin.co/geosite/wink |
 | wise | https://surge.bojin.co/geosite/wise |
