@@ -299,6 +299,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-password-management | https://surge.bojin.co/geosite/category-password-management |
 | category-payment-ir | https://surge.bojin.co/geosite/category-payment-ir |
 | category-porn | https://surge.bojin.co/geosite/category-porn |
+| category-proxy-tunnels | https://surge.bojin.co/geosite/category-proxy-tunnels |
 | category-pt | https://surge.bojin.co/geosite/category-pt |
 | category-public-tracker | https://surge.bojin.co/geosite/category-public-tracker |
 | category-remote-control | https://surge.bojin.co/geosite/category-remote-control |
@@ -935,6 +936,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | nexon | https://surge.bojin.co/geosite/nexon |
 | nga | https://surge.bojin.co/geosite/nga |
 | nginx | https://surge.bojin.co/geosite/nginx |
+| ngrok | https://surge.bojin.co/geosite/ngrok |
 | niconico | https://surge.bojin.co/geosite/niconico |
 | nike | https://surge.bojin.co/geosite/nike |
 | nikkan-gendai | https://surge.bojin.co/geosite/nikkan-gendai |
@@ -1016,6 +1018,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | pinduoduo | https://surge.bojin.co/geosite/pinduoduo |
 | pingan | https://surge.bojin.co/geosite/pingan |
 | pingcap | https://surge.bojin.co/geosite/pingcap |
+| pinggy | https://surge.bojin.co/geosite/pinggy |
 | pingpe | https://surge.bojin.co/geosite/pingpe |
 | pingsx | https://surge.bojin.co/geosite/pingsx |
 | pinkcore | https://surge.bojin.co/geosite/pinkcore |
