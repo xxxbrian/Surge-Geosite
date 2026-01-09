@@ -253,6 +253,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-documents-cn | https://surge.bojin.co/geosite/category-documents-cn |
 | category-doh | https://surge.bojin.co/geosite/category-doh |
 | category-ecommerce | https://surge.bojin.co/geosite/category-ecommerce |
+| category-ecommerce-ru | https://surge.bojin.co/geosite/category-ecommerce-ru |
 | category-education-cn | https://surge.bojin.co/geosite/category-education-cn |
 | category-education-ir | https://surge.bojin.co/geosite/category-education-ir |
 | category-electronic-cn | https://surge.bojin.co/geosite/category-electronic-cn |
@@ -261,6 +262,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-enterprise-query-platform-cn | https://surge.bojin.co/geosite/category-enterprise-query-platform-cn |
 | category-entertainment | https://surge.bojin.co/geosite/category-entertainment |
 | category-entertainment-cn | https://surge.bojin.co/geosite/category-entertainment-cn |
+| category-entertainment-ru | https://surge.bojin.co/geosite/category-entertainment-ru |
 | category-finance | https://surge.bojin.co/geosite/category-finance |
 | category-food-cn | https://surge.bojin.co/geosite/category-food-cn |
 | category-forums | https://surge.bojin.co/geosite/category-forums |
@@ -303,6 +305,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | category-pt | https://surge.bojin.co/geosite/category-pt |
 | category-public-tracker | https://surge.bojin.co/geosite/category-public-tracker |
 | category-remote-control | https://surge.bojin.co/geosite/category-remote-control |
+| category-retail-ru | https://surge.bojin.co/geosite/category-retail-ru |
 | category-ru | https://surge.bojin.co/geosite/category-ru |
 | category-scholar-!cn | https://surge.bojin.co/geosite/category-scholar-!cn |
 | category-scholar-cn | https://surge.bojin.co/geosite/category-scholar-cn |
@@ -896,6 +899,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mopub-ads | https://surge.bojin.co/geosite/mopub-ads |
 | morisawa | https://surge.bojin.co/geosite/morisawa |
 | mortein | https://surge.bojin.co/geosite/mortein |
+| mosmetro | https://surge.bojin.co/geosite/mosmetro |
 | movefree | https://surge.bojin.co/geosite/movefree |
 | moxing | https://surge.bojin.co/geosite/moxing |
 | mozilla | https://surge.bojin.co/geosite/mozilla |
@@ -1235,6 +1239,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | tcl | https://surge.bojin.co/geosite/tcl |
 | teambition | https://surge.bojin.co/geosite/teambition |
 | teamviewer | https://surge.bojin.co/geosite/teamviewer |
+| technogym | https://surge.bojin.co/geosite/technogym |
 | techpowerup | https://surge.bojin.co/geosite/techpowerup |
 | techtimes | https://surge.bojin.co/geosite/techtimes |
 | ted | https://surge.bojin.co/geosite/ted |
