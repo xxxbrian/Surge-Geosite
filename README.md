@@ -1121,6 +1121,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | scala | https://surge.bojin.co/geosite/scala |
 | scaleflex | https://surge.bojin.co/geosite/scaleflex |
 | scenesource | https://surge.bojin.co/geosite/scenesource |
+| schoopia | https://surge.bojin.co/geosite/schoopia |
 | schwab | https://surge.bojin.co/geosite/schwab |
 | sci | https://surge.bojin.co/geosite/sci |
 | sci-hub | https://surge.bojin.co/geosite/sci-hub |
