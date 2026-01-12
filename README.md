@@ -1016,7 +1016,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | pgyer | https://surge.bojin.co/geosite/pgyer |
 | phoenix | https://surge.bojin.co/geosite/phoenix |
 | picacg | https://surge.bojin.co/geosite/picacg |
-| picacg-ads | https://surge.bojin.co/geosite/picacg-ads |
 | picsee | https://surge.bojin.co/geosite/picsee |
 | pikpak | https://surge.bojin.co/geosite/pikpak |
 | pinduoduo | https://surge.bojin.co/geosite/pinduoduo |
@@ -1463,7 +1462,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | zeplin | https://surge.bojin.co/geosite/zeplin |
 | zhangtao | https://surge.bojin.co/geosite/zhangtao |
 | zhihu | https://surge.bojin.co/geosite/zhihu |
-| zhihu-ads | https://surge.bojin.co/geosite/zhihu-ads |
 | zhimeishe | https://surge.bojin.co/geosite/zhimeishe |
 | zhubajie | https://surge.bojin.co/geosite/zhubajie |
 | ziroom | https://surge.bojin.co/geosite/ziroom |
