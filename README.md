@@ -1202,6 +1202,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | starworld | https://surge.bojin.co/geosite/starworld |
 | staticfile | https://surge.bojin.co/geosite/staticfile |
 | steam | https://surge.bojin.co/geosite/steam |
+| steaminventoryhelper | https://surge.bojin.co/geosite/steaminventoryhelper |
 | steamunlocked | https://surge.bojin.co/geosite/steamunlocked |
 | steemit | https://surge.bojin.co/geosite/steemit |
 | sto-express | https://surge.bojin.co/geosite/sto-express |
