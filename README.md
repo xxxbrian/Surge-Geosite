@@ -1052,6 +1052,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | protonmail | https://surge.bojin.co/geosite/protonmail |
 | pstorage | https://surge.bojin.co/geosite/pstorage |
 | ptt | https://surge.bojin.co/geosite/ptt |
+| pubg | https://surge.bojin.co/geosite/pubg |
 | pubmatic | https://surge.bojin.co/geosite/pubmatic |
 | pubmatic-ads | https://surge.bojin.co/geosite/pubmatic-ads |
 | pugpig | https://surge.bojin.co/geosite/pugpig |
