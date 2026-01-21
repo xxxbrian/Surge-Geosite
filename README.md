@@ -823,6 +823,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | linuxdo | https://surge.bojin.co/geosite/linuxdo |
 | lisiku | https://surge.bojin.co/geosite/lisiku |
 | litv | https://surge.bojin.co/geosite/litv |
+| liveperson | https://surge.bojin.co/geosite/liveperson |
 | lizhi | https://surge.bojin.co/geosite/lizhi |
 | lkcoffee | https://surge.bojin.co/geosite/lkcoffee |
 | localbitcoins | https://surge.bojin.co/geosite/localbitcoins |
@@ -1134,7 +1135,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | segment-ads | https://surge.bojin.co/geosite/segment-ads |
 | segmentfault | https://surge.bojin.co/geosite/segmentfault |
 | sehuatang | https://surge.bojin.co/geosite/sehuatang |
-| sensorsdata-ads | https://surge.bojin.co/geosite/sensorsdata-ads |
 | sentry | https://surge.bojin.co/geosite/sentry |
 | setapp | https://surge.bojin.co/geosite/setapp |
 | setn | https://surge.bojin.co/geosite/setn |
@@ -1196,6 +1196,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | stackexchange | https://surge.bojin.co/geosite/stackexchange |
 | stackpath | https://surge.bojin.co/geosite/stackpath |
 | stage1st | https://surge.bojin.co/geosite/stage1st |
+| standardchartered | https://surge.bojin.co/geosite/standardchartered |
 | starbucks | https://surge.bojin.co/geosite/starbucks |
 | starfieldtech | https://surge.bojin.co/geosite/starfieldtech |
 | starplus | https://surge.bojin.co/geosite/starplus |
@@ -1418,6 +1419,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | xiaomi | https://surge.bojin.co/geosite/xiaomi |
 | xiaomi-ads | https://surge.bojin.co/geosite/xiaomi-ads |
 | xiaomi-ai | https://surge.bojin.co/geosite/xiaomi-ai |
+| xiaomi-iot | https://surge.bojin.co/geosite/xiaomi-iot |
 | xiaoyuzhou | https://surge.bojin.co/geosite/xiaoyuzhou |
 | ximalaya | https://surge.bojin.co/geosite/ximalaya |
 | ximalaya-ads | https://surge.bojin.co/geosite/ximalaya-ads |
@@ -1440,6 +1442,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | youjizz | https://surge.bojin.co/geosite/youjizz |
 | youku | https://surge.bojin.co/geosite/youku |
 | youku-ads | https://surge.bojin.co/geosite/youku-ads |
+| youmind | https://surge.bojin.co/geosite/youmind |
 | youporn | https://surge.bojin.co/geosite/youporn |
 | youquan | https://surge.bojin.co/geosite/youquan |
 | youtube | https://surge.bojin.co/geosite/youtube |
