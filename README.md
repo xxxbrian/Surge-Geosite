@@ -497,6 +497,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | embl | https://surge.bojin.co/geosite/embl |
 | emogi-ads | https://surge.bojin.co/geosite/emogi-ads |
 | emojipedia | https://surge.bojin.co/geosite/emojipedia |
+| eneba | https://surge.bojin.co/geosite/eneba |
 | enfa | https://surge.bojin.co/geosite/enfa |
 | entermediadb | https://surge.bojin.co/geosite/entermediadb |
 | entrust | https://surge.bojin.co/geosite/entrust |
