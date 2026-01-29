@@ -54,7 +54,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | actalis | https://surge.bojin.co/geosite/actalis |
 | adblock | https://surge.bojin.co/geosite/adblock |
 | adblockplus | https://surge.bojin.co/geosite/adblockplus |
-| adcolony-ads | https://surge.bojin.co/geosite/adcolony-ads |
 | addthis | https://surge.bojin.co/geosite/addthis |
 | addtoany | https://surge.bojin.co/geosite/addtoany |
 | adguard | https://surge.bojin.co/geosite/adguard |
@@ -113,7 +112,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | apple-tvplus | https://surge.bojin.co/geosite/apple-tvplus |
 | apple-update | https://surge.bojin.co/geosite/apple-update |
 | appledaily | https://surge.bojin.co/geosite/appledaily |
-| applovin-ads | https://surge.bojin.co/geosite/applovin-ads |
 | applysquare | https://surge.bojin.co/geosite/applysquare |
 | aptoide | https://surge.bojin.co/geosite/aptoide |
 | archive | https://surge.bojin.co/geosite/archive |
@@ -128,7 +126,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | asproex | https://surge.bojin.co/geosite/asproex |
 | asus | https://surge.bojin.co/geosite/asus |
 | atlassian | https://surge.bojin.co/geosite/atlassian |
-| atom-data-ads | https://surge.bojin.co/geosite/atom-data-ads |
 | att | https://surge.bojin.co/geosite/att |
 | attwatchtv | https://surge.bojin.co/geosite/attwatchtv |
 | autodesk | https://surge.bojin.co/geosite/autodesk |
@@ -183,6 +180,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | bmw | https://surge.bojin.co/geosite/bmw |
 | boboporn | https://surge.bojin.co/geosite/boboporn |
 | boc | https://surge.bojin.co/geosite/boc |
+| bohemia | https://surge.bojin.co/geosite/bohemia |
 | bongacams | https://surge.bojin.co/geosite/bongacams |
 | booking | https://surge.bojin.co/geosite/booking |
 | books | https://surge.bojin.co/geosite/books |
@@ -495,7 +493,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | embark | https://surge.bojin.co/geosite/embark |
 | embedly | https://surge.bojin.co/geosite/embedly |
 | embl | https://surge.bojin.co/geosite/embl |
-| emogi-ads | https://surge.bojin.co/geosite/emogi-ads |
 | emojipedia | https://surge.bojin.co/geosite/emojipedia |
 | eneba | https://surge.bojin.co/geosite/eneba |
 | enfa | https://surge.bojin.co/geosite/enfa |
@@ -545,7 +542,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | flibusta | https://surge.bojin.co/geosite/flibusta |
 | flickr | https://surge.bojin.co/geosite/flickr |
 | flowus | https://surge.bojin.co/geosite/flowus |
-| flurry-ads | https://surge.bojin.co/geosite/flurry-ads |
 | flutter | https://surge.bojin.co/geosite/flutter |
 | fontawesome | https://surge.bojin.co/geosite/fontawesome |
 | fontexplorer | https://surge.bojin.co/geosite/fontexplorer |
@@ -612,7 +608,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | greatfire | https://surge.bojin.co/geosite/greatfire |
 | gree | https://surge.bojin.co/geosite/gree |
 | groq | https://surge.bojin.co/geosite/groq |
-| growingio-ads | https://surge.bojin.co/geosite/growingio-ads |
 | gucci | https://surge.bojin.co/geosite/gucci |
 | guo | https://surge.bojin.co/geosite/guo |
 | guokr | https://surge.bojin.co/geosite/guokr |
@@ -634,7 +629,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | heroku | https://surge.bojin.co/geosite/heroku |
 | hetzner | https://surge.bojin.co/geosite/hetzner |
 | heyzo | https://surge.bojin.co/geosite/heyzo |
-| hiido-ads | https://surge.bojin.co/geosite/hiido-ads |
 | hikvision | https://surge.bojin.co/geosite/hikvision |
 | hinet | https://surge.bojin.co/geosite/hinet |
 | hinet-eca | https://surge.bojin.co/geosite/hinet-eca |
@@ -651,7 +645,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | hongkongpost | https://surge.bojin.co/geosite/hongkongpost |
 | honor | https://surge.bojin.co/geosite/honor |
 | hooligapps | https://surge.bojin.co/geosite/hooligapps |
-| hotjar-ads | https://surge.bojin.co/geosite/hotjar-ads |
 | hotstar | https://surge.bojin.co/geosite/hotstar |
 | hoyoverse | https://surge.bojin.co/geosite/hoyoverse |
 | hp | https://surge.bojin.co/geosite/hp |
@@ -703,7 +696,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | imperialcollege | https://surge.bojin.co/geosite/imperialcollege |
 | infowars | https://surge.bojin.co/geosite/infowars |
 | infrapedia | https://surge.bojin.co/geosite/infrapedia |
-| inner-active-ads | https://surge.bojin.co/geosite/inner-active-ads |
 | inoreader | https://surge.bojin.co/geosite/inoreader |
 | inshot | https://surge.bojin.co/geosite/inshot |
 | insider | https://surge.bojin.co/geosite/insider |
@@ -898,7 +890,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mongodb | https://surge.bojin.co/geosite/mongodb |
 | monotype | https://surge.bojin.co/geosite/monotype |
 | moonvy | https://surge.bojin.co/geosite/moonvy |
-| mopub-ads | https://surge.bojin.co/geosite/mopub-ads |
 | morisawa | https://surge.bojin.co/geosite/morisawa |
 | mortein | https://surge.bojin.co/geosite/mortein |
 | mosmetro | https://surge.bojin.co/geosite/mosmetro |
@@ -912,7 +903,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | mudvod | https://surge.bojin.co/geosite/mudvod |
 | muji | https://surge.bojin.co/geosite/muji |
 | musixmatch | https://surge.bojin.co/geosite/musixmatch |
-| mxplayer-ads | https://surge.bojin.co/geosite/mxplayer-ads |
 | mxroute | https://surge.bojin.co/geosite/mxroute |
 | mydirtyhobby | https://surge.bojin.co/geosite/mydirtyhobby |
 | myfonts | https://surge.bojin.co/geosite/myfonts |
@@ -934,7 +924,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | netlify | https://surge.bojin.co/geosite/netlify |
 | neuralink | https://surge.bojin.co/geosite/neuralink |
 | newegg | https://surge.bojin.co/geosite/newegg |
-| newrelic-ads | https://surge.bojin.co/geosite/newrelic-ads |
 | newscorp | https://surge.bojin.co/geosite/newscorp |
 | newsmax | https://surge.bojin.co/geosite/newsmax |
 | nexitally | https://surge.bojin.co/geosite/nexitally |
@@ -1037,7 +1026,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | playstation | https://surge.bojin.co/geosite/playstation |
 | plutotv | https://surge.bojin.co/geosite/plutotv |
 | pocketcasts | https://surge.bojin.co/geosite/pocketcasts |
-| pocoiq-ads | https://surge.bojin.co/geosite/pocoiq-ads |
 | poe | https://surge.bojin.co/geosite/poe |
 | polocloud | https://surge.bojin.co/geosite/polocloud |
 | polymer | https://surge.bojin.co/geosite/polymer |
@@ -1231,12 +1219,10 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | symantec-pki | https://surge.bojin.co/geosite/symantec-pki |
 | synology | https://surge.bojin.co/geosite/synology |
 | taboola | https://surge.bojin.co/geosite/taboola |
-| tagtic-ads | https://surge.bojin.co/geosite/tagtic-ads |
 | taikang | https://surge.bojin.co/geosite/taikang |
 | tailscale | https://surge.bojin.co/geosite/tailscale |
 | talkatone | https://surge.bojin.co/geosite/talkatone |
 | taomee | https://surge.bojin.co/geosite/taomee |
-| tappx-ads | https://surge.bojin.co/geosite/tappx-ads |
 | taptap | https://surge.bojin.co/geosite/taptap |
 | target | https://surge.bojin.co/geosite/target |
 | taylorfrancis | https://surge.bojin.co/geosite/taylorfrancis |
@@ -1316,7 +1302,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | typography | https://surge.bojin.co/geosite/typography |
 | u17 | https://surge.bojin.co/geosite/u17 |
 | uber | https://surge.bojin.co/geosite/uber |
-| uberads-ads | https://surge.bojin.co/geosite/uberads-ads |
 | ubiquiti | https://surge.bojin.co/geosite/ubiquiti |
 | ubisoft | https://surge.bojin.co/geosite/ubisoft |
 | ubuntu | https://surge.bojin.co/geosite/ubuntu |
