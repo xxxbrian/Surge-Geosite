@@ -58,7 +58,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | addtoany | https://surge.bojin.co/geosite/addtoany |
 | adguard | https://surge.bojin.co/geosite/adguard |
 | adidas | https://surge.bojin.co/geosite/adidas |
-| adjust-ads | https://surge.bojin.co/geosite/adjust-ads |
+| adjust | https://surge.bojin.co/geosite/adjust |
 | adobe | https://surge.bojin.co/geosite/adobe |
 | adobe-activation | https://surge.bojin.co/geosite/adobe-activation |
 | adobe-ads | https://surge.bojin.co/geosite/adobe-ads |
@@ -354,7 +354,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ck101 | https://surge.bojin.co/geosite/ck101 |
 | clarivate | https://surge.bojin.co/geosite/clarivate |
 | clearasil | https://surge.bojin.co/geosite/clearasil |
-| clearbit-ads | https://surge.bojin.co/geosite/clearbit-ads |
+| clearbit | https://surge.bojin.co/geosite/clearbit |
 | clips4sale | https://surge.bojin.co/geosite/clips4sale |
 | cloudcone | https://surge.bojin.co/geosite/cloudcone |
 | cloudconvert | https://surge.bojin.co/geosite/cloudconvert |
@@ -957,7 +957,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | nytimes | https://surge.bojin.co/geosite/nytimes |
 | oan | https://surge.bojin.co/geosite/oan |
 | oculus | https://surge.bojin.co/geosite/oculus |
-| ogury-ads | https://surge.bojin.co/geosite/ogury-ads |
+| ogury | https://surge.bojin.co/geosite/ogury |
 | ok | https://surge.bojin.co/geosite/ok |
 | okaapps | https://surge.bojin.co/geosite/okaapps |
 | okjike | https://surge.bojin.co/geosite/okjike |
@@ -978,7 +978,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | openstreetmap | https://surge.bojin.co/geosite/openstreetmap |
 | openweather | https://surge.bojin.co/geosite/openweather |
 | openwrt | https://surge.bojin.co/geosite/openwrt |
-| openx-ads | https://surge.bojin.co/geosite/openx-ads |
+| openx | https://surge.bojin.co/geosite/openx |
 | oppo | https://surge.bojin.co/geosite/oppo |
 | oracle | https://surge.bojin.co/geosite/oracle |
 | oreilly | https://surge.bojin.co/geosite/oreilly |
@@ -1044,7 +1044,6 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ptt | https://surge.bojin.co/geosite/ptt |
 | pubg | https://surge.bojin.co/geosite/pubg |
 | pubmatic | https://surge.bojin.co/geosite/pubmatic |
-| pubmatic-ads | https://surge.bojin.co/geosite/pubmatic-ads |
 | pugpig | https://surge.bojin.co/geosite/pugpig |
 | purikonejp | https://surge.bojin.co/geosite/purikonejp |
 | python | https://surge.bojin.co/geosite/python |
@@ -1121,7 +1120,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | seasun | https://surge.bojin.co/geosite/seasun |
 | secom | https://surge.bojin.co/geosite/secom |
 | sectigo | https://surge.bojin.co/geosite/sectigo |
-| segment-ads | https://surge.bojin.co/geosite/segment-ads |
+| segment | https://surge.bojin.co/geosite/segment |
 | segmentfault | https://surge.bojin.co/geosite/segmentfault |
 | sehuatang | https://surge.bojin.co/geosite/sehuatang |
 | sentry | https://surge.bojin.co/geosite/sentry |
@@ -1207,7 +1206,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | sumkoo | https://surge.bojin.co/geosite/sumkoo |
 | suning | https://surge.bojin.co/geosite/suning |
 | supercell | https://surge.bojin.co/geosite/supercell |
-| supersonic-ads | https://surge.bojin.co/geosite/supersonic-ads |
+| supersonic | https://surge.bojin.co/geosite/supersonic |
 | surflite | https://surge.bojin.co/geosite/surflite |
 | suruga-ya | https://surge.bojin.co/geosite/suruga-ya |
 | svp | https://surge.bojin.co/geosite/svp |
@@ -1315,7 +1314,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | umeng-ads | https://surge.bojin.co/geosite/umeng-ads |
 | unionpay | https://surge.bojin.co/geosite/unionpay |
 | unity | https://surge.bojin.co/geosite/unity |
-| unity-ads | https://surge.bojin.co/geosite/unity-ads |
+| unitychina | https://surge.bojin.co/geosite/unitychina |
 | upai | https://surge.bojin.co/geosite/upai |
 | usersdrive | https://surge.bojin.co/geosite/usersdrive |
 | uu-chat | https://surge.bojin.co/geosite/uu-chat |
