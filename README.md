@@ -824,6 +824,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | logitech | https://surge.bojin.co/geosite/logitech |
 | londonreal | https://surge.bojin.co/geosite/londonreal |
 | longbridge | https://surge.bojin.co/geosite/longbridge |
+| louisvuitton | https://surge.bojin.co/geosite/louisvuitton |
 | lowiro | https://surge.bojin.co/geosite/lowiro |
 | ltn | https://surge.bojin.co/geosite/ltn |
 | lumion | https://surge.bojin.co/geosite/lumion |
