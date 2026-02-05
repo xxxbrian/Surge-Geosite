@@ -581,6 +581,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | gitee | https://surge.bojin.co/geosite/gitee |
 | github | https://surge.bojin.co/geosite/github |
 | github-ads | https://surge.bojin.co/geosite/github-ads |
+| github-copilot | https://surge.bojin.co/geosite/github-copilot |
 | github1s | https://surge.bojin.co/geosite/github1s |
 | gitlab | https://surge.bojin.co/geosite/gitlab |
 | gitv | https://surge.bojin.co/geosite/gitv |
