@@ -609,6 +609,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | greatfire | https://surge.bojin.co/geosite/greatfire |
 | gree | https://surge.bojin.co/geosite/gree |
 | groq | https://surge.bojin.co/geosite/groq |
+| growingio | https://surge.bojin.co/geosite/growingio |
 | gucci | https://surge.bojin.co/geosite/gucci |
 | guo | https://surge.bojin.co/geosite/guo |
 | guokr | https://surge.bojin.co/geosite/guokr |
@@ -1067,6 +1068,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | quora | https://surge.bojin.co/geosite/quora |
 | qwant | https://surge.bojin.co/geosite/qwant |
 | qweather | https://surge.bojin.co/geosite/qweather |
+| radiko | https://surge.bojin.co/geosite/radiko |
 | rakuten | https://surge.bojin.co/geosite/rakuten |
 | rarbg | https://surge.bojin.co/geosite/rarbg |
 | razer | https://surge.bojin.co/geosite/razer |
