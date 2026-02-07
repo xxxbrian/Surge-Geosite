@@ -840,6 +840,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | manhuagui | https://surge.bojin.co/geosite/manhuagui |
 | manorama | https://surge.bojin.co/geosite/manorama |
 | manoto | https://surge.bojin.co/geosite/manoto |
+| manus | https://surge.bojin.co/geosite/manus |
 | maocloud | https://surge.bojin.co/geosite/maocloud |
 | mapbox | https://surge.bojin.co/geosite/mapbox |
 | marvel | https://surge.bojin.co/geosite/marvel |
