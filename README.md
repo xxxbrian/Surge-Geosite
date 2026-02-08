@@ -130,6 +130,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | attwatchtv | https://surge.bojin.co/geosite/attwatchtv |
 | autodesk | https://surge.bojin.co/geosite/autodesk |
 | avaxhome | https://surge.bojin.co/geosite/avaxhome |
+| aviasales | https://surge.bojin.co/geosite/aviasales |
 | avito | https://surge.bojin.co/geosite/avito |
 | avmoo | https://surge.bojin.co/geosite/avmoo |
 | awempire | https://surge.bojin.co/geosite/awempire |
@@ -625,6 +626,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | haveibeenpwned | https://surge.bojin.co/geosite/haveibeenpwned |
 | hbo | https://surge.bojin.co/geosite/hbo |
 | hcaptcha | https://surge.bojin.co/geosite/hcaptcha |
+| hdrezka | https://surge.bojin.co/geosite/hdrezka |
 | hentaichen | https://surge.bojin.co/geosite/hentaichen |
 | hentaivn | https://surge.bojin.co/geosite/hentaivn |
 | herogame | https://surge.bojin.co/geosite/herogame |
@@ -768,6 +770,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | kktv | https://surge.bojin.co/geosite/kktv |
 | knovel | https://surge.bojin.co/geosite/knovel |
 | kodi | https://surge.bojin.co/geosite/kodi |
+| kodik | https://surge.bojin.co/geosite/kodik |
 | konachan | https://surge.bojin.co/geosite/konachan |
 | koolearn | https://surge.bojin.co/geosite/koolearn |
 | kraken | https://surge.bojin.co/geosite/kraken |
@@ -1378,6 +1381,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | wikihow | https://surge.bojin.co/geosite/wikihow |
 | wikimedia | https://surge.bojin.co/geosite/wikimedia |
 | wildberries | https://surge.bojin.co/geosite/wildberries |
+| windsurf | https://surge.bojin.co/geosite/windsurf |
 | windy | https://surge.bojin.co/geosite/windy |
 | wink | https://surge.bojin.co/geosite/wink |
 | wise | https://surge.bojin.co/geosite/wise |
