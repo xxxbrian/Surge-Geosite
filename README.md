@@ -561,6 +561,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | ftv | https://surge.bojin.co/geosite/ftv |
 | futu | https://surge.bojin.co/geosite/futu |
 | fzdm | https://surge.bojin.co/geosite/fzdm |
+| gaijin | https://surge.bojin.co/geosite/gaijin |
 | gamersky | https://surge.bojin.co/geosite/gamersky |
 | gandi | https://surge.bojin.co/geosite/gandi |
 | ganji | https://surge.bojin.co/geosite/ganji |
@@ -1228,6 +1229,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | taboola | https://surge.bojin.co/geosite/taboola |
 | taikang | https://surge.bojin.co/geosite/taikang |
 | tailscale | https://surge.bojin.co/geosite/tailscale |
+| take-two | https://surge.bojin.co/geosite/take-two |
 | talkatone | https://surge.bojin.co/geosite/talkatone |
 | taomee | https://surge.bojin.co/geosite/taomee |
 | taptap | https://surge.bojin.co/geosite/taptap |
@@ -1471,3 +1473,4 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | zto-express | https://surge.bojin.co/geosite/zto-express |
 | zuoyebang | https://surge.bojin.co/geosite/zuoyebang |
 | zuoyebang-ads | https://surge.bojin.co/geosite/zuoyebang-ads |
+| zynga | https://surge.bojin.co/geosite/zynga |
