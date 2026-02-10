@@ -417,6 +417,7 @@ This conversion ensures real-time updates and compatibility with Surge configura
 | dart | https://surge.bojin.co/geosite/dart |
 | dazn | https://surge.bojin.co/geosite/dazn |
 | dcard | https://surge.bojin.co/geosite/dcard |
+| ddmaicai | https://surge.bojin.co/geosite/ddmaicai |
 | debian | https://surge.bojin.co/geosite/debian |
 | decryptipastore | https://surge.bojin.co/geosite/decryptipastore |
 | dedao | https://surge.bojin.co/geosite/dedao |
