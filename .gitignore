@@ -23,6 +23,7 @@ out-sample/
 
 # Workspace package outputs
 packages/*/dist/
+packages/panel/.astro/
 
 # Cloudflare Wrangler local state
 .wrangler/

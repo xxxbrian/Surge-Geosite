@@ -1,12 +1,13 @@
 # @surge-geosite/worker
 
-Cloudflare Worker runtime for geosite serving with built-in cron refresh.
+Cloudflare Worker runtime for geosite serving with built-in cron refresh and same-domain panel hosting.
 
 ## Endpoints
 
 - `GET /geosite`
 - `GET /geosite/:name_with_filter` (default mode: `balanced`)
 - `GET /geosite/:mode/:name_with_filter` where mode is `strict|balanced|full`
+- Other paths are served by static assets (`ASSETS`) from `packages/panel/dist`.
 
 ## Runtime Model
 
@@ -15,7 +16,9 @@ Cloudflare Worker runtime for geosite serving with built-in cron refresh.
   - If ETag unchanged: update check timestamp only.
   - If ETag changed: download ZIP once, extract `data/*`, write snapshot + index to R2, then update `state/latest.json`.
 - `fetch`:
-  - Read latest state from R2.
+  - Route `/geosite*` requests to API handlers.
+  - Route non-API paths to `ASSETS` (panel frontend).
+  - API handlers read latest state from R2.
   - Serve prebuilt artifact from `artifacts/{etag}/{mode}/{name[@filter]}.txt` when available.
   - On miss, compile on-demand from snapshot and cache artifact.
   - Unknown filters are served as empty output but are not persisted as artifacts.
@@ -38,6 +41,7 @@ Retention:
 
 `packages/worker/wrangler.toml` includes:
 
+- `[assets]` pointing to `../panel/dist` with binding `ASSETS`
 - `[triggers] crons = ["*/5 * * * *"]`
 - `[vars]` for `UPSTREAM_ZIP_URL` and `UPSTREAM_USER_AGENT`
 - `[[r2_buckets]]` binding `GEOSITE_BUCKET`

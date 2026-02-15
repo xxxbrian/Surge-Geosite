@@ -38,8 +38,13 @@ export interface R2BucketLike {
   put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<void>;
 }
 
+export interface AssetsBindingLike {
+  fetch(request: Request): Promise<Response>;
+}
+
 export interface WorkerEnv {
   GEOSITE_BUCKET: R2BucketLike;
+  ASSETS?: AssetsBindingLike;
   UPSTREAM_ZIP_URL?: string;
   UPSTREAM_USER_AGENT?: string;
 }
@@ -265,15 +270,14 @@ async function handleFetch(request: Request, env: WorkerEnv, ctx: ExecutionConte
   const url = new URL(request.url);
   const path = url.pathname;
 
-  if (path === "/") {
-    return redirect("https://github.com/xxxbrian/Surge-Geosite");
-  }
-
   if (path === "/geosite") {
     return handleGeositeIndex(env, ctx);
   }
 
   if (!path.startsWith("/geosite/")) {
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
     return text(404, "not found");
   }
 
@@ -305,7 +309,7 @@ async function handleFetch(request: Request, env: WorkerEnv, ctx: ExecutionConte
 }
 
 async function handleGeositeIndex(env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
-  const latest = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
+  const latest = await ensureLatestState(env);
   if (!latest) {
     return json(503, { ok: false, error: "geosite data not ready" });
   }
@@ -341,7 +345,7 @@ async function handleGeositeRules(
     return text(400, "invalid name");
   }
 
-  const latest = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
+  const latest = await ensureLatestState(env);
   if (!latest) {
     return text(503, "geosite data not ready");
   }
@@ -359,7 +363,7 @@ async function handleGeositeRules(
 
   const compilePromise = ensureArtifactForLatest(env, latest, mode, name, filter);
 
-  if (!filter && latest.previousEtag) {
+  if (!filter && latest.previousEtag && index && index[name]) {
     const staleKey = artifactKey(latest.previousEtag, mode, name, filter);
     const staleArtifact = await readText(env.GEOSITE_BUCKET, staleKey);
     if (staleArtifact !== null) {
@@ -535,6 +539,10 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
     snapshotCache.delete(cacheKey);
     throw error;
   });
+}
+
+async function ensureLatestState(env: WorkerEnv): Promise<LatestState | null> {
+  return readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
 }
 
 async function maybeEnrichIndexFilters(
@@ -776,15 +784,6 @@ function text(status: number, body: string, headers: Record<string, string> = {}
   return new Response(body, {
     status,
     headers
-  });
-}
-
-function redirect(location: string): Response {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      location
-    }
   });
 }
 

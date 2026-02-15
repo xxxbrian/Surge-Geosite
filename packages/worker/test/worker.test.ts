@@ -296,6 +296,26 @@ describe("refreshGeositeRun", () => {
 });
 
 describe("worker fetch routes", () => {
+  test("returns 503 when latest state is missing and does not hit upstream", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    const calls: string[] = [];
+    const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      calls.push((init?.method ?? "GET").toUpperCase());
+      return new Response(null, { status: 500 });
+    };
+
+    const worker = createWorker({ fetchImpl });
+    const indexResponse = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
+    expect(indexResponse.status).toBe(503);
+    expect(await indexResponse.json()).toEqual({ ok: false, error: "geosite data not ready" });
+
+    const rulesResponse = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
+    expect(rulesResponse.status).toBe(503);
+    expect(await rulesResponse.text()).toBe("geosite data not ready");
+    expect(calls).toEqual([]);
+  });
+
   test("compiles and serves artifact on first request", async () => {
     const bucket = new MemoryR2Bucket();
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
@@ -365,6 +385,18 @@ describe("worker fetch routes", () => {
         google: "domain:google.com\nfull:mail.google.com\n"
       })
     );
+    await bucket.putJson("snapshots/etag-stale-v2/index/geosite.json", {
+      google: {
+        name: "GOOGLE",
+        sourceFile: "google",
+        filters: [],
+        modes: {
+          strict: "rules/strict/google.txt",
+          balanced: "rules/balanced/google.txt",
+          full: "rules/full/google.txt"
+        }
+      }
+    });
 
     await bucket.put("artifacts/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
 
@@ -425,6 +457,40 @@ describe("worker fetch routes", () => {
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
     expect(response.status).toBe(404);
+    expect(response.headers.get("x-stale")).toBeNull();
+  });
+
+  test("does not serve stale artifact when index is missing", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+
+    await bucket.putJson("state/latest.json", {
+      upstream: {
+        zipUrl: "https://example.com/master.zip",
+        etag: "etag-noindex-v2"
+      },
+      snapshot: {
+        sourceKey: "snapshots/etag-noindex-v2/sources.json.gz",
+        indexKey: "snapshots/etag-noindex-v2/index/geosite.json",
+        listCount: 1,
+        generatedAt: "2026-02-15T00:00:00.000Z"
+      },
+      previousEtag: "etag-noindex-v1",
+      checkedAt: "2026-02-15T00:00:00.000Z"
+    });
+
+    await bucket.put(
+      "snapshots/etag-noindex-v2/sources.json.gz",
+      makeSnapshotPayload("etag-noindex-v2", {
+        github: "domain:github.com\n"
+      })
+    );
+    await bucket.put("artifacts/etag-noindex-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
+
+    const worker = createWorker();
+    const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("list not found: google");
     expect(response.headers.get("x-stale")).toBeNull();
   });
 
@@ -531,5 +597,25 @@ describe("worker fetch routes", () => {
     const response = await worker.fetch(new Request("https://example.com/geosite/%E0%A4%A"), env, new TestContext());
     expect(response.status).toBe(400);
     expect(await response.text()).toBe("invalid path encoding");
+  });
+
+  test("serves panel assets on non-api routes", async () => {
+    const bucket = new MemoryR2Bucket();
+    const worker = createWorker();
+    const env: WorkerEnv = {
+      GEOSITE_BUCKET: bucket,
+      ASSETS: {
+        async fetch(): Promise<Response> {
+          return new Response("<html>panel</html>", {
+            status: 200,
+            headers: { "content-type": "text/html; charset=utf-8" }
+          });
+        }
+      }
+    };
+
+    const response = await worker.fetch(new Request("https://example.com/"), env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("panel");
   });
 });

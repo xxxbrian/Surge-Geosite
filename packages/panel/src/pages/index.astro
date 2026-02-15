@@ -1,0 +1,148 @@
+---
+import "../styles/global.css";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Surge Geosite Panel</title>
+    <meta
+      name="description"
+      content="Surge Geosite panel: geosite datasets converted for Surge."
+    />
+    <link rel="icon" href="/favicon.svg" />
+  </head>
+  <body>
+    <main class="mx-auto flex h-dvh w-full max-w-[1400px] flex-col gap-4 overflow-hidden px-4 py-4 box-border lg:px-8">
+      <header class="panel border-b-2 border-[color:var(--text)] bg-transparent px-2 py-4">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div class="space-y-1">
+            <p class="text-xs font-semibold tracking-[0.2em] text-[color:var(--primary)]">SURGE GEOSITE</p>
+            <h1 id="mainTitle" class="text-2xl font-semibold tracking-tight sm:text-3xl">Surge Geosite</h1>
+            <p id="subTitle" class="text-sm text-[color:var(--muted)]">
+              Geosite datasets, converted for Surge and ready to use.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="inline-flex border border-[color:var(--border)] bg-white">
+              <button id="langZh" class="lang-btn border-r border-[color:var(--border)] px-2.5 py-1.5 text-xs font-semibold" data-lang="zh" type="button">ZH</button>
+              <button id="langEn" class="lang-btn px-2.5 py-1.5 text-xs font-semibold" data-lang="en" type="button">EN</button>
+            </div>
+            <a
+              class="inline-flex items-center justify-center border border-[color:var(--text)] px-3 py-2 text-sm font-semibold text-[color:var(--text)] transition hover:bg-[color:var(--text)] hover:text-white"
+              href="https://github.com/xxxbrian/Surge-Geosite"
+              rel="noreferrer"
+              target="_blank"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <section class="grid min-h-0 flex-1 gap-4 lg:grid-cols-[19rem_1fr]">
+        <aside class="panel flex min-h-0 flex-col p-3">
+          <div class="mb-3 flex items-center justify-between border-b border-[color:var(--border)] pb-2">
+            <h2 id="datasetsTitle" class="text-xs font-semibold tracking-[0.14em] text-[color:var(--muted)]">DATASETS</h2>
+            <span id="listCount" class="code-font text-xs text-[color:var(--muted)]">loading...</span>
+          </div>
+
+          <label class="mb-3 block">
+            <span class="sr-only">Search datasets</span>
+            <input
+              id="searchInput"
+              class="w-full border border-[color:var(--border)] bg-white px-3 py-2 text-sm outline-none ring-[color:var(--primary)] transition focus:ring-2"
+              placeholder="Search datasets, e.g. google"
+              type="search"
+            />
+          </label>
+
+          <div id="listContainer" class="list-scroll min-h-0 flex-1 space-y-1"></div>
+        </aside>
+
+        <section class="panel flex min-h-0 flex-col p-4 lg:p-5">
+          <div class="space-y-4 border-b border-[color:var(--border)] pb-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p id="selectedDatasetLabel" class="text-xs font-semibold tracking-[0.14em] text-[color:var(--muted)]">SELECTED DATASET</p>
+                <h2 id="selectedName" class="code-font mt-1 text-xl font-semibold">-</h2>
+              </div>
+
+              <div id="modeSwitch" class="inline-flex border border-[color:var(--border)] bg-white">
+                <button class="mode-btn border-r border-[color:var(--border)] px-3 py-2 text-sm font-semibold" data-mode="strict" type="button">strict</button>
+                <button class="mode-btn border-r border-[color:var(--border)] px-3 py-2 text-sm font-semibold" data-mode="balanced" type="button">balanced</button>
+                <button class="mode-btn px-3 py-2 text-sm font-semibold" data-mode="full" type="button">full</button>
+              </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-[1fr_13rem_auto]">
+              <label class="space-y-1">
+                <span id="filterLabel" class="text-xs font-semibold text-[color:var(--muted)]">Filter Tag</span>
+                <select id="filterSelect" class="w-full border border-[color:var(--border)] bg-white px-3 py-2 text-sm"></select>
+              </label>
+
+              <label class="space-y-1">
+                <span id="manualFilterLabel" class="text-xs font-semibold text-[color:var(--muted)]">Manual Tag (Optional)</span>
+                <input id="manualFilter" class="code-font w-full border border-[color:var(--border)] bg-white px-3 py-2 text-sm" placeholder="e.g. cn" />
+              </label>
+
+              <div class="flex items-end">
+                <button
+                  id="loadRules"
+                  class="w-full border border-[color:var(--primary)] bg-[color:var(--primary)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  type="button"
+                >
+                  Load Rules
+                </button>
+              </div>
+            </div>
+
+            <div class="grid gap-2 text-xs text-[color:var(--muted)] sm:grid-cols-2 lg:grid-cols-4">
+              <div><span id="etagLabel">upstream etag:</span> <span id="etag" class="code-font">-</span></div>
+              <div><span id="staleLabel">stale fallback:</span> <span id="isStale" class="code-font">-</span></div>
+              <div><span id="modeLabel">mode:</span> <span id="activeMode" class="code-font">balanced</span></div>
+              <div><span id="rulesLabel">rules:</span> <span id="ruleLines" class="code-font">-</span></div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_18rem]">
+            <article class="flex min-h-0 flex-col">
+              <div class="mb-2 flex items-center justify-between">
+                <h3 id="rulePreviewTitle" class="text-xs font-semibold tracking-[0.14em] text-[color:var(--muted)]">RULE PREVIEW</h3>
+                <a id="rawLink" class="text-xs font-semibold text-[color:var(--accent)] hover:underline" href="#">Open Raw URL</a>
+              </div>
+              <pre id="rulesPreview" class="rule-scroll code-font min-h-0 flex-1 border border-[color:var(--border)] bg-white p-3 text-[12px] leading-5">Please select a dataset.</pre>
+            </article>
+
+            <aside class="min-h-0 space-y-3 overflow-auto border-l border-[color:var(--border)] pl-3">
+              <section>
+                <h4 id="datasetInfoTitle" class="mb-2 text-xs font-semibold tracking-[0.14em] text-[color:var(--muted)]">DATASET INFO</h4>
+                <dl class="space-y-1 text-xs text-[color:var(--muted)]">
+                  <div>
+                    <dt id="sourceFileLabel" class="inline">source file:</dt>
+                    <dd id="sourceFile" class="code-font inline">-</dd>
+                  </div>
+                  <div>
+                    <dt id="filterCountLabel" class="inline">filter count:</dt>
+                    <dd id="filterCount" class="code-font inline">0</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section>
+                <h4 id="quickLinksTitle" class="mb-2 text-xs font-semibold tracking-[0.14em] text-[color:var(--muted)]">QUICK LINKS</h4>
+                <div id="quickLinks" class="space-y-1 text-xs"></div>
+              </section>
+            </aside>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      import { startPanel } from "../lib/panel-client.js";
+      startPanel();
+    </script>
+  </body>
+</html>

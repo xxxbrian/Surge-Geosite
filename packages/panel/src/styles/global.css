@@ -1,0 +1,46 @@
+@import "tailwindcss";
+@import "@fontsource-variable/manrope";
+@import "@fontsource/jetbrains-mono/400.css";
+
+:root {
+  --bg: #eef3f8;
+  --surface: #f7fbff;
+  --text: #0f172a;
+  --muted: #4f5f73;
+  --primary: #0e7490;
+  --accent: #f97316;
+  --border: #c6d3e2;
+}
+
+html,
+body {
+  height: 100%;
+  background:
+    linear-gradient(180deg, #f0f5fb 0%, #ebf1f7 100%),
+    radial-gradient(circle at 5% 0%, #f9fcff 0, transparent 42%),
+    radial-gradient(circle at 95% 8%, #d9edf6 0, transparent 34%),
+    var(--bg);
+  color: var(--text);
+  font-family: "Manrope Variable", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.code-font {
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, monospace;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 90%, white 10%);
+}
+
+.rule-scroll {
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.list-scroll {
+  height: 100%;
+  overflow: auto;
+  scrollbar-width: thin;
+}
