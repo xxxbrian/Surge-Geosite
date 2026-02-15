@@ -1,0 +1,29 @@
+{
+  "name": "@surge-geosite/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json --noEmit",
+    "test": "pnpm --filter @surge-geosite/core build && vitest run",
+    "cf:dev": "wrangler dev",
+    "cf:dev:cron": "wrangler dev --test-scheduled",
+    "cf:deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@surge-geosite/core": "workspace:*",
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.65.0"
+  }
+}

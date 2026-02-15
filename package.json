@@ -1,0 +1,23 @@
+{
+  "name": "surge-geosite",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "check": "pnpm typecheck && pnpm test",
+    "build:real": "pnpm --filter @surge-geosite/cli build && node ./packages/cli/dist/index.js build --data-dir ./domain-list-community/data --out-dir ./out",
+    "build:sample": "pnpm --filter @surge-geosite/cli build && node ./packages/cli/dist/index.js build --data-dir ./domain-list-community/data --list google,github --out-dir ./out-sample",
+    "worker:dev": "pnpm --filter @surge-geosite/worker run cf:dev",
+    "worker:dev:cron": "pnpm --filter @surge-geosite/worker run cf:dev:cron",
+    "worker:deploy": "pnpm --filter @surge-geosite/worker run cf:deploy",
+    "worker:login": "pnpm --filter @surge-geosite/worker exec wrangler login",
+    "worker:r2:create": "pnpm --filter @surge-geosite/worker exec wrangler r2 bucket create surge-geosite"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

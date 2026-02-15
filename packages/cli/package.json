@@ -1,0 +1,19 @@
+{
+  "name": "@surge-geosite/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "surge-geosite": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json --noEmit",
+    "test": "pnpm --filter @surge-geosite/core build && vitest run"
+  },
+  "dependencies": {
+    "@surge-geosite/core": "workspace:*"
+  }
+}

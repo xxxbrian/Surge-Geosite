@@ -1,0 +1,22 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+
+name = "surge-geosite"
+main = "src/index.ts"
+compatibility_date = "2026-02-15"
+workers_dev = true
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[vars]
+UPSTREAM_ZIP_URL = "https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip"
+UPSTREAM_USER_AGENT = "surge-geosite-worker/2"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[r2_buckets]]
+binding = "GEOSITE_BUCKET"
+bucket_name = "surge-geosite"
+preview_bucket_name = "surge-geosite"
