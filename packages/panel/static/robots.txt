@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /en
 Allow: /zh
+Allow: /llms.txt
+Allow: /llms-full.txt
 Disallow: /geosite
 Disallow: /geosite/
 Disallow: /geosite-srs

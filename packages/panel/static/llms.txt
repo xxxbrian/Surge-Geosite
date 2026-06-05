@@ -1,0 +1,68 @@
+# Surge Geosite
+
+> Converts v2fly/domain-list-community geosite datasets into ready-to-use Surge rulesets. It also provides cached/mirrored sing-box `.srs` and Mihomo `.mrs` artifact endpoints.
+
+`balanced` is the normal default mode. `strict` and `full` exist for explicit conversion tradeoffs.
+
+This file is a concise LLM-readable summary. For full API behavior, examples, and implementation details, read [`/llms-full.txt`](https://surge.bojin.co/llms-full.txt).
+
+## Access Policy
+
+The `/geosite*`, `/geosite-srs*`, and `/geosite-mrs*` endpoints are API/artifact endpoints. They are disallowed in `robots.txt` to prevent search-engine indexing of generated resources, not to prohibit user-directed, on-demand API use.
+
+Specific endpoints can be requested for a user task. Bulk crawling or indexing every generated artifact is discouraged.
+
+## Key Resources
+
+- [Full LLM reference](https://surge.bojin.co/llms-full.txt): Complete API behavior, mode details, error handling, and examples.
+- [Available geosite index](https://surge.bojin.co/geosite): Available list names and metadata.
+- [English dashboard](https://surge.bojin.co/en): Human UI for discovering lists and copying URLs.
+- [Chinese dashboard](https://surge.bojin.co/zh): Chinese human UI for discovering lists and copying URLs.
+
+## API Endpoints
+
+- [`/geosite`](https://surge.bojin.co/geosite): Return the available geosite list index.
+- [`/geosite/{name}`](https://surge.bojin.co/geosite/google): Return a Surge ruleset in default `balanced` mode.
+- [`/geosite/{mode}/{name}`](https://surge.bojin.co/geosite/balanced/google): Return a Surge ruleset for `strict`, `balanced`, or `full` mode.
+- [`/geosite/{mode}/{name}@{filter}`](https://surge.bojin.co/geosite/balanced/apple%40cn): Return only entries tagged with a filter such as `@cn`.
+- [`/geosite-srs/{name}`](https://surge.bojin.co/geosite-srs/google): Return a sing-box `.srs` artifact.
+- [`/geosite-mrs/{name}`](https://surge.bojin.co/geosite-mrs/google): Return a Mihomo `.mrs` artifact.
+
+## Modes
+
+- `balanced`: Default and recommended mode for normal use.
+- `strict`: Conservative conversion for avoiding lossy regex conversion.
+- `full`: Maximum coverage with higher over-match risk.
+
+## Names And Filters
+
+- List names are lowercase, for example `google`, `apple`, or `category-ads-all`.
+- Filters use the `@filter` suffix, for example `apple@cn`.
+- URL-encode `@` as `%40` when needed by clients or tools.
+
+## Usage Notes
+
+- `/geosite` is the index endpoint for list discovery.
+- `/geosite/google` is equivalent to `/geosite/balanced/google`.
+- `balanced` is the normal default mode.
+- `strict` is the conservative mode.
+- `full` is the broadest mode and can over-match more than `balanced`.
+- Artifacts are intended for on-demand use. Bulk crawling every list, mode, and filter combination is discouraged.
+
+## Examples
+
+- [`/geosite/balanced/google`](https://surge.bojin.co/geosite/balanced/google): Surge ruleset for `google` in recommended balanced mode.
+- [`/geosite/balanced/apple@cn`](https://surge.bojin.co/geosite/balanced/apple%40cn): Surge ruleset for `apple` entries tagged `@cn`.
+- [`/geosite-srs/google`](https://surge.bojin.co/geosite-srs/google): sing-box SRS artifact for `google`.
+- [`/geosite-mrs/google`](https://surge.bojin.co/geosite-mrs/google): Mihomo MRS artifact for `google`.
+
+## Errors
+
+- `400`: Invalid name, mode, filter, or path encoding.
+- `404`: List or remote artifact not found.
+- `503`: Geosite data is not ready yet.
+
+## Source
+
+- [GitHub repository](https://github.com/xxxbrian/Surge-Geosite): Source code and maintainer documentation.
+- [domain-list-community](https://github.com/v2fly/domain-list-community): Upstream geosite data source.

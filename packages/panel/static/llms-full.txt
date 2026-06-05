@@ -1,0 +1,254 @@
+# Surge Geosite
+
+> Surge Geosite converts `v2fly/domain-list-community` geosite datasets into ready-to-use Surge rulesets. It also exposes cached/mirrored sing-box `.srs` and Mihomo `.mrs` artifacts for the same list names where available.
+
+`balanced` is the normal default mode. `strict` and `full` exist for explicit conversion tradeoffs.
+
+## Project Overview
+
+Surge Geosite is an HTTP service and dashboard for discovering geosite lists and generating rule URLs. It is designed for specific rule URL generation, not for mirroring the entire dataset.
+
+## Access Policy
+
+The `/geosite*`, `/geosite-srs*`, and `/geosite-mrs*` endpoints are API/artifact endpoints. They are disallowed in `robots.txt` to prevent search-engine indexing of generated resources, not to prohibit user-directed, on-demand API use.
+
+Specific endpoints can be requested for a user task. Bulk crawling or indexing every generated artifact is discouraged.
+
+The main human entry points are:
+
+- [English dashboard](https://surge.bojin.co/en)
+- [Chinese dashboard](https://surge.bojin.co/zh)
+
+The main machine entry point is:
+
+- [`/geosite`](https://surge.bojin.co/geosite)
+
+## Common Task Flow
+
+For simple usage discovery, `/geosite` provides the available list index. `balanced` is the normal mode for Surge rulesets. `strict` is the conservative mode, and `full` is the broadest mode with more over-match risk.
+
+Filters use the `{name}@{filter}` suffix, such as `apple@cn`. sing-box artifacts are under `/geosite-srs/{name}`. Mihomo artifacts are under `/geosite-mrs/{name}`.
+
+Artifacts are intended for specific on-demand URLs. Bulk crawling every list, mode, and filter combination is discouraged.
+
+## API Reference
+
+### `GET /geosite`
+
+Returns the available geosite index. This endpoint provides list names and metadata.
+
+Index contents:
+
+- List names such as `google`, `apple`, or `category-ads-all`.
+- Known filters when metadata is available.
+- Source-file metadata for each list.
+
+Approximate JSON shape:
+
+```json
+{
+  "google": {
+    "name": "GOOGLE",
+    "sourceFile": "google",
+    "filters": ["cn"],
+    "modes": {
+      "strict": "rules/strict/google.txt",
+      "balanced": "rules/balanced/google.txt",
+      "full": "rules/full/google.txt"
+    }
+  }
+}
+```
+
+### `GET /geosite/{name}`
+
+Returns a Surge ruleset using default `balanced` mode.
+
+`/geosite/google` is equivalent to `/geosite/balanced/google`.
+
+Example:
+
+```text
+https://surge.bojin.co/geosite/google
+```
+
+### `GET /geosite/{mode}/{name}`
+
+Returns a Surge ruleset using the selected mode. The response body is `text/plain`; each non-empty line is a Surge rule such as `DOMAIN-SUFFIX,example.com`.
+
+Valid modes:
+
+- `strict`
+- `balanced`
+- `full`
+
+Example:
+
+```text
+https://surge.bojin.co/geosite/balanced/google
+```
+
+### `GET /geosite/{mode}/{name}@{filter}`
+
+Returns a `text/plain` Surge ruleset containing only entries tagged with the selected filter.
+
+Example:
+
+```text
+https://surge.bojin.co/geosite/balanced/apple@cn
+```
+
+If a client requires URL encoding, encode `@` as `%40`:
+
+```text
+https://surge.bojin.co/geosite/balanced/apple%40cn
+```
+
+### `GET /geosite-srs/{name}`
+
+Returns a cached/mirrored sing-box `.srs` artifact for a list name.
+
+Example:
+
+```text
+https://surge.bojin.co/geosite-srs/google
+```
+
+### `GET /geosite-mrs/{name}`
+
+Returns a cached/mirrored Mihomo `.mrs` artifact for a list name.
+
+Example:
+
+```text
+https://surge.bojin.co/geosite-mrs/google
+```
+
+## Regex Modes
+
+### `balanced`
+
+Normal default. It provides a controlled conversion strategy suitable for normal use.
+
+### `strict`
+
+Most conservative conversion. Unsupported or non-lossless regex conversion is skipped.
+
+### `full`
+
+Most permissive conversion. It aims for maximum coverage and can have higher over-match risk. It is not the normal default mode.
+
+## Names And Filters
+
+- List names are lowercase.
+- Examples: `google`, `apple`, `github`, `category-ads-all`.
+- Filters are lowercase attributes appended with `@`.
+- Example: `apple@cn` means list `apple` filtered to entries tagged `cn`.
+- Not all lists have filters. `/geosite` contains known filter metadata when available.
+
+## URL Encoding
+
+Path examples in documentation may show raw `@` for readability:
+
+```text
+https://surge.bojin.co/geosite/balanced/apple@cn
+```
+
+When constructing URLs programmatically, encode the combined `{name}@{filter}` path segment if needed:
+
+```text
+https://surge.bojin.co/geosite/balanced/apple%40cn
+```
+
+Slashes are not valid inside list names. List names and filters are validated and invalid values return `400`.
+
+## ETag And Conditional Requests
+
+Responses are cache-friendly and include `ETag` headers where applicable.
+
+Supported HTTP behavior:
+
+- `ETag` can identify a response version.
+- `If-None-Match` is supported for conditional requests where applicable.
+- `304 Not Modified` means the representation has not changed.
+- The upstream geosite source changes on its own schedule.
+
+Some responses can include stale fallback behavior while fresh artifacts are rebuilt in the background. If the `x-stale: 1` header is present, the body is a previous artifact served intentionally to keep the service responsive.
+
+## Errors
+
+- `400 invalid name`: The list name, filter, mode, or path encoding is invalid.
+- `404 list not found`: The requested geosite list does not exist.
+- `404 srs not found`: The requested sing-box SRS artifact was not found upstream.
+- `404 mrs not found`: The requested Mihomo MRS artifact was not found upstream.
+- `503 geosite data not ready`: The service has not finished preparing initial geosite data.
+
+`503` indicates temporary unavailability while data is not ready.
+
+## Cookbooks
+
+### Give a user a Surge URL for Google
+
+Example balanced-mode URL:
+
+```text
+https://surge.bojin.co/geosite/balanced/google
+```
+
+### Give a user a Surge URL for Apple CN entries
+
+Example balanced-mode URL with a filter:
+
+```text
+https://surge.bojin.co/geosite/balanced/apple@cn
+```
+
+### Give a user a sing-box SRS URL
+
+Example SRS endpoint:
+
+```text
+https://surge.bojin.co/geosite-srs/google
+```
+
+### Give a user a Mihomo MRS URL
+
+Example MRS endpoint:
+
+```text
+https://surge.bojin.co/geosite-mrs/google
+```
+
+### Discover available lists
+
+Index endpoint:
+
+```text
+https://surge.bojin.co/geosite
+```
+
+The response is the source of truth for available list names.
+
+## Data Source And Refresh
+
+The source of truth is [`v2fly/domain-list-community`](https://github.com/v2fly/domain-list-community). The service periodically checks upstream changes and refreshes snapshots when upstream changes are detected.
+
+Generated artifacts are cached by upstream version, mode, list name, and optional filter. Some artifacts are built on demand and reused after the first request.
+
+## Operational Notes And Limits
+
+- Bulk crawling every `/geosite/{mode}/{name}` combination is discouraged.
+- Bulk crawling every filter combination is discouraged.
+- `full` is not the safest or default mode.
+- Not every list has filters.
+- SRS and MRS artifacts may not exist for every geosite list.
+- `503` responses indicate temporary data readiness issues.
+- This file is documentation, not a full dump of upstream geosite data.
+
+## Human And Source Links
+
+- [English dashboard](https://surge.bojin.co/en)
+- [Chinese dashboard](https://surge.bojin.co/zh)
+- [Concise LLM guide](https://surge.bojin.co/llms.txt)
+- [GitHub repository](https://github.com/xxxbrian/Surge-Geosite)
+- [Upstream domain-list-community](https://github.com/v2fly/domain-list-community)
