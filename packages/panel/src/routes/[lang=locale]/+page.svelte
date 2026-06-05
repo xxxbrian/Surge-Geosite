@@ -60,6 +60,7 @@
 	$: tr = (key, vars = {}) => t(locale, key, vars);
 
 	function applyServerData(next: PageData) {
+		clearManualDebounceTimer();
 		const nextLocale = next.locale as PanelLocale;
 		locale = nextLocale;
 		index = next.index ?? {};
@@ -155,15 +156,6 @@
 	$: canonicalPath = locale === 'en' ? '/en' : '/zh';
 	$: canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
 
-	$: if (browser) {
-		if (manualDebounceTimer) {
-			clearTimeout(manualDebounceTimer);
-		}
-		manualDebounceTimer = setTimeout(() => {
-			debouncedManualFilter = manualFilter;
-		}, 280);
-	}
-
 	$: if (selected) {
 		const queryKey = `${selected}|${mode}|${debouncedFilter ?? ''}`;
 		if (queryKey !== lastQueryKey) {
@@ -190,6 +182,13 @@
 		etag = '-';
 		stale = '-';
 		ruleLines = '-';
+	}
+
+	function clearManualDebounceTimer() {
+		if (manualDebounceTimer) {
+			clearTimeout(manualDebounceTimer);
+			manualDebounceTimer = null;
+		}
 	}
 
 	async function loadRules(filter: string | null, force = false) {
@@ -281,6 +280,7 @@
 
 			selected = names[0] ?? null;
 			selectedFilter = NONE_FILTER;
+			clearManualDebounceTimer();
 			manualFilter = '';
 			debouncedManualFilter = '';
 			previewText = tr('switchedDatasetLoading', { name: selected });
@@ -327,6 +327,7 @@
 		}
 		selected = name;
 		selectedFilter = NONE_FILTER;
+		clearManualDebounceTimer();
 		manualFilter = '';
 		debouncedManualFilter = '';
 		previewText = tr('switchedDatasetLoading', { name });
@@ -348,6 +349,10 @@
 
 	function onManualFilterInput(value: string) {
 		manualFilter = value;
+		clearManualDebounceTimer();
+		manualDebounceTimer = setTimeout(() => {
+			debouncedManualFilter = value;
+		}, 280);
 		previewText = tr('filterInputLoading');
 	}
 
@@ -379,9 +384,7 @@
 		}
 
 		return () => {
-			if (manualDebounceTimer) {
-				clearTimeout(manualDebounceTimer);
-			}
+			clearManualDebounceTimer();
 			if (copiedQuickLinkTimer) {
 				clearTimeout(copiedQuickLinkTimer);
 			}
