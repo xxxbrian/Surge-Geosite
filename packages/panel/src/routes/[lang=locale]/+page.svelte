@@ -499,13 +499,13 @@
 						<h2 class="mt-1 font-mono text-xl font-semibold">{selected ?? '-'}</h2>
 					</div>
 
-					<div class="inline-flex overflow-hidden rounded-md border">
+					<div class="grid w-full grid-cols-3 overflow-hidden rounded-md border lg:inline-flex lg:w-auto">
 						{#each MODES as item}
 							<Button
 								type="button"
 								variant={mode === item ? 'default' : 'ghost'}
 								size="sm"
-								class="rounded-none border-r last:border-r-0"
+								class="w-full rounded-none border-r last:border-r-0 lg:w-auto"
 								onclick={() => onModeChange(item)}
 							>
 								{item}
