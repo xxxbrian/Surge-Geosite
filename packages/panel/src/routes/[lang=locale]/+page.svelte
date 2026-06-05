@@ -124,7 +124,7 @@
 		}
 		return MODES.map((item) => ({
 			mode: item,
-			href: buildRulesPublicPath(item, selected as string, liveFilter)
+			href: `${SITE_ORIGIN}${buildRulesPublicPath(item, selected as string, liveFilter)}`
 		}));
 	})();
 	$: moreLinks = (() => {
