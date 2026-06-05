@@ -86,7 +86,7 @@ describe("refreshGeositeRun", () => {
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
 
     const zipBytes = zipSync({
-      "domain-list-community-master/data/google": strToU8("domain:google.com\n"),
+      "domain-list-community-master/data/google": strToU8("domain:google.com @cn\nfull:mail.google.com @us\n"),
       "domain-list-community-master/data/github": strToU8("domain:github.com\n")
     });
 
@@ -130,7 +130,12 @@ describe("refreshGeositeRun", () => {
 
     expect(latest.upstream.etag).toBe("etag-refresh-v1");
     expect(await bucket.get(latest.snapshot.sourceKey)).not.toBeNull();
-    expect(await bucket.get(latest.snapshot.indexKey)).not.toBeNull();
+    const indexRaw = await bucket.get(latest.snapshot.indexKey);
+    expect(indexRaw).not.toBeNull();
+    expect(JSON.parse(await indexRaw!.text())).toEqual({
+      github: [],
+      google: ["cn", "us"]
+    });
   });
 
   test("returns unchanged when head etag matches current", async () => {
@@ -346,7 +351,7 @@ describe("worker fetch routes", () => {
       })
     );
     await bucket.putJson("snapshots/etag-fetch-v1/index/geosite.json", {
-      google: { name: "GOOGLE", sourceFile: "google", filters: [], modes: {} }
+      google: []
     });
 
     const ctx = new TestContext();
@@ -362,6 +367,48 @@ describe("worker fetch routes", () => {
     expect(cached).not.toBeNull();
 
     await ctx.drain();
+  });
+
+  test("serves compact geosite index with versioned etag", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+
+    await bucket.putJson("state/latest.json", {
+      upstream: {
+        zipUrl: "https://example.com/master.zip",
+        etag: "etag-index-v1"
+      },
+      snapshot: {
+        sourceKey: "snapshots/etag-index-v1/sources.json.gz",
+        indexKey: "snapshots/etag-index-v1/index/geosite.json",
+        listCount: 2,
+        generatedAt: "2026-02-15T00:00:00.000Z"
+      },
+      previousEtag: null,
+      checkedAt: "2026-02-15T00:00:00.000Z"
+    });
+    await bucket.putJson("snapshots/etag-index-v1/index/geosite.json", {
+      apple: ["cn"],
+      google: []
+    });
+
+    const worker = createWorker();
+    const response = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("etag")).toBe('"geosite-index-v2:etag-index-v1"');
+    expect(await response.json()).toEqual({
+      apple: ["cn"],
+      google: []
+    });
+
+    const notModified = await worker.fetch(
+      new Request("https://example.com/geosite", {
+        headers: { "if-none-match": '"geosite-index-v2:etag-index-v1"' }
+      }),
+      env,
+      new TestContext()
+    );
+    expect(notModified.status).toBe(304);
   });
 
   test("returns stale artifact and refreshes latest in background", async () => {
@@ -390,16 +437,7 @@ describe("worker fetch routes", () => {
       })
     );
     await bucket.putJson("snapshots/etag-stale-v2/index/geosite.json", {
-      google: {
-        name: "GOOGLE",
-        sourceFile: "google",
-        filters: [],
-        modes: {
-          strict: "rules/strict/google.txt",
-          balanced: "rules/balanced/google.txt",
-          full: "rules/full/google.txt"
-        }
-      }
+      google: []
     });
 
     await bucket.put("artifacts/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
@@ -445,16 +483,7 @@ describe("worker fetch routes", () => {
       })
     );
     await bucket.putJson("snapshots/etag-del-v2/index/geosite.json", {
-      github: {
-        name: "GITHUB",
-        sourceFile: "github",
-        filters: [],
-        modes: {
-          strict: "rules/strict/github.txt",
-          balanced: "rules/balanced/github.txt",
-          full: "rules/full/github.txt"
-        }
-      }
+      github: []
     });
     await bucket.put("artifacts/etag-del-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
 
@@ -498,7 +527,48 @@ describe("worker fetch routes", () => {
     expect(response.headers.get("x-stale")).toBeNull();
   });
 
-  test("does not cache unknown filter artifacts and lazily enriches index filters", async () => {
+  test("rebuilds compact index from snapshot when index object is missing", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+
+    await bucket.putJson("state/latest.json", {
+      upstream: {
+        zipUrl: "https://example.com/master.zip",
+        etag: "etag-index-missing-v1"
+      },
+      snapshot: {
+        sourceKey: "snapshots/etag-index-missing-v1/sources.json.gz",
+        indexKey: "snapshots/etag-index-missing-v1/index/geosite.json",
+        listCount: 1,
+        generatedAt: "2026-02-15T00:00:00.000Z"
+      },
+      previousEtag: null,
+      checkedAt: "2026-02-15T00:00:00.000Z"
+    });
+    await bucket.put(
+      "snapshots/etag-index-missing-v1/sources.json.gz",
+      makeSnapshotPayload("etag-index-missing-v1", {
+        apple: "domain:apple.com @cn\nfull:icloud.com @us\n"
+      })
+    );
+
+    const ctx = new TestContext();
+    const worker = createWorker();
+    const response = await worker.fetch(new Request("https://example.com/geosite"), env, ctx);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      apple: ["cn", "us"]
+    });
+
+    await ctx.drain();
+    const rebuilt = await bucket.get("snapshots/etag-index-missing-v1/index/geosite.json");
+    expect(rebuilt).not.toBeNull();
+    expect(JSON.parse(await rebuilt!.text())).toEqual({
+      apple: ["cn", "us"]
+    });
+  });
+
+  test("does not cache unknown filter artifacts or mutate compact index", async () => {
     const bucket = new MemoryR2Bucket();
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
 
@@ -524,16 +594,7 @@ describe("worker fetch routes", () => {
       })
     );
     await bucket.putJson("snapshots/etag-filter-v1/index/geosite.json", {
-      google: {
-        name: "GOOGLE",
-        sourceFile: "google",
-        filters: [],
-        modes: {
-          strict: "rules/strict/google.txt",
-          balanced: "rules/balanced/google.txt",
-          full: "rules/full/google.txt"
-        }
-      }
+      google: ["cn"]
     });
 
     const ctx = new TestContext();
@@ -552,10 +613,9 @@ describe("worker fetch routes", () => {
 
     const indexRaw = await bucket.get("snapshots/etag-filter-v1/index/geosite.json");
     expect(indexRaw).not.toBeNull();
-    const index = JSON.parse(await indexRaw!.text()) as {
-      google: { filters: string[] };
-    };
-    expect(index.google.filters).toEqual(["cn"]);
+    expect(JSON.parse(await indexRaw!.text())).toEqual({
+      google: ["cn"]
+    });
   });
 
   test("recovers from transient snapshot parse failure without poisoned cache", async () => {

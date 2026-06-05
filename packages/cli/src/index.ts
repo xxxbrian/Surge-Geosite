@@ -21,12 +21,7 @@ import { loadListsFromDirectory } from "./fs-loader.js";
 
 const ALL_MODES: RegexMode[] = ["strict", "balanced", "full"];
 
-interface BuildIndexEntry {
-  name: string;
-  sourceFile?: string;
-  filters: string[];
-  modes: Record<RegexMode, string>;
-}
+type BuildIndex = Record<string, string[]>;
 
 interface BuildMeta {
   generatedAt: string;
@@ -79,7 +74,7 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
   await mkdir(path.join(outDir, "index"), { recursive: true });
 
   const listStats: ListStats[] = [];
-  const indexRecord: Record<string, BuildIndexEntry> = {};
+  const indexRecord: BuildIndex = {};
 
   for (const listName of requestedNames) {
     const resolvedList = resolved[listName]!;
@@ -122,17 +117,7 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
     const perListStatsPath = path.join(outDir, "stats", "lists", `${listName.toLowerCase()}.json`);
     await writeFile(perListStatsPath, `${JSON.stringify(currentListStats, null, 2)}\n`, "utf8");
 
-    const sourceFile = sourceRecord[listName.toLowerCase()] !== undefined ? listName.toLowerCase() : undefined;
-    indexRecord[listName.toLowerCase()] = {
-      name: listName,
-      ...(sourceFile ? { sourceFile } : {}),
-      filters: Object.keys(currentListStats.filters.attrs).sort(),
-      modes: {
-        strict: `rules/strict/${listName.toLowerCase()}.txt`,
-        balanced: `rules/balanced/${listName.toLowerCase()}.txt`,
-        full: `rules/full/${listName.toLowerCase()}.txt`
-      }
-    };
+    indexRecord[listName.toLowerCase()] = Object.keys(currentListStats.filters.attrs).sort();
   }
 
   const globalStats = aggregateGlobalStats(listStats);

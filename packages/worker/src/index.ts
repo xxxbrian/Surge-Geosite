@@ -17,6 +17,7 @@ const DEFAULT_MRS_UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/MetaCub
 const DEFAULT_MRS_UPSTREAM_USER_AGENT = "surge-geosite-worker/2";
 const DEFAULT_MRS_CACHE_TTL_SECONDS = 86400;
 const LATEST_STATE_KEY = "state/latest.json";
+const GEOSITE_INDEX_SCHEMA_VERSION = 2;
 const SNAPSHOT_CACHE_LIMIT = 2;
 const RESOLVED_CACHE_LIMIT = 2;
 
@@ -100,14 +101,7 @@ interface SnapshotPayload {
   lists: Record<string, string>;
 }
 
-interface GeositeIndexEntry {
-  name: string;
-  sourceFile: string;
-  filters: string[];
-  modes: Record<RegexMode, string>;
-}
-
-type GeositeIndex = Record<string, GeositeIndexEntry>;
+type GeositeIndex = Record<string, string[]>;
 
 interface RefreshResult {
   updated: boolean;
@@ -247,7 +241,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   }
   // Validate snapshot can be parsed and resolved before publishing it as latest.
   const parsed = parseListsFromText(sources);
-  void resolveAllLists(parsed);
+  const resolved = resolveAllLists(parsed);
 
   const generatedAt = new Date(now()).toISOString();
   const sourceKey = snapshotSourceKey(computedEtag);
@@ -262,7 +256,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   };
 
   const compressedSnapshot = gzipSync(strToU8(JSON.stringify(snapshotPayload)));
-  const index = buildIndexFromSources(sources);
+  const index = buildIndexFromSources(sources, resolved);
 
   await writeBinary(env.GEOSITE_BUCKET, sourceKey, compressedSnapshot, {
     contentType: "application/json",
@@ -510,7 +504,7 @@ async function handleGeositeIndex(request: Request, env: WorkerEnv, ctx: Executi
   }
 
   const snapshot = await loadSnapshotPayload(env, latest);
-  const builtIndex = buildIndexFromSources(snapshot.lists);
+  const builtIndex = buildIndexFromSnapshot(snapshot.lists);
   ctx.waitUntil(writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, builtIndex));
 
   return json(200, builtIndex, indexHeaders);
@@ -545,23 +539,19 @@ async function handleGeositeRules(
   }
 
   const index = await readJson<GeositeIndex>(env.GEOSITE_BUCKET, latest.snapshot.indexKey);
-  if (index && !index[name]) {
+  if (index && !hasOwn(index, name)) {
     return text(404, `list not found: ${name}`);
   }
 
   const compilePromise = ensureArtifactForLatest(env, latest, mode, name, filter);
 
-  if (!filter && latest.previousEtag && index && index[name]) {
+  if (!filter && latest.previousEtag && index && hasOwn(index, name)) {
     const staleKey = artifactKey(latest.previousEtag, mode, name, filter);
     const staleArtifact = await readText(env.GEOSITE_BUCKET, staleKey);
     if (staleArtifact !== null) {
       const responseEtag = buildRulesEtag(latest.previousEtag, mode, name, filter);
       const headers = responseHeaders(latest.previousEtag, mode, name, filter, true);
-      ctx.waitUntil(
-        compilePromise
-          .then((result) => maybeEnrichIndexFilters(env, latest, name, result.availableFilters))
-          .catch(() => undefined)
-      );
+      ctx.waitUntil(compilePromise.catch(() => undefined));
 
       if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
         return notModified(headers);
@@ -573,10 +563,6 @@ async function handleGeositeRules(
   const build = await compilePromise;
   if (!build.listFound) {
     return text(404, `list not found: ${name}`);
-  }
-
-  if (build.availableFilters.length > 0) {
-    ctx.waitUntil(maybeEnrichIndexFilters(env, latest, name, build.availableFilters));
   }
 
   const responseEtag = buildRulesEtag(latest.upstream.etag, mode, name, filter);
@@ -816,7 +802,7 @@ async function revalidateRemoteBinaryFromUpstream(
 }
 
 function buildIndexEtag(upstreamEtag: string): string {
-  return `"${upstreamEtag}-index"`;
+  return `"geosite-index-v${GEOSITE_INDEX_SCHEMA_VERSION}:${upstreamEtag}"`;
 }
 
 function buildRulesEtag(upstreamEtag: string, mode: RegexMode, name: string, filter: string | null): string {
@@ -971,61 +957,25 @@ async function ensureLatestState(env: WorkerEnv): Promise<LatestState | null> {
   return readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
 }
 
-async function maybeEnrichIndexFilters(
-  env: WorkerEnv,
-  latest: LatestState,
-  listName: string,
-  filters: string[]
-): Promise<void> {
-  if (filters.length === 0) {
-    return;
-  }
-
-  const normalizedFilters = [...new Set(filters)].sort();
-  const index = await readJson<GeositeIndex>(env.GEOSITE_BUCKET, latest.snapshot.indexKey);
-  if (!index) {
-    return;
-  }
-
-  const lookupName = listName.toLowerCase();
-  const current = index[lookupName];
-  if (!current) {
-    return;
-  }
-
-  if (isSameStringArray(current.filters, normalizedFilters)) {
-    return;
-  }
-
-  const nextIndex: GeositeIndex = {
-    ...index,
-    [lookupName]: {
-      ...current,
-      filters: normalizedFilters
-    }
-  };
-
-  await writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, nextIndex);
+function buildIndexFromSnapshot(sources: Record<string, string>): GeositeIndex {
+  const parsed = parseListsFromText(sources);
+  const resolved = resolveAllLists(parsed);
+  return buildIndexFromSources(sources, resolved);
 }
 
-function buildIndexFromSources(sources: Record<string, string>): GeositeIndex {
+function buildIndexFromSources(sources: Record<string, string>, resolved: Record<string, ResolvedList>): GeositeIndex {
   const names = Object.keys(sources).sort();
   const index: GeositeIndex = {};
 
   for (const listName of names) {
-    index[listName] = {
-      name: listName.toUpperCase(),
-      sourceFile: listName,
-      filters: [],
-      modes: {
-        strict: `rules/strict/${listName}.txt`,
-        balanced: `rules/balanced/${listName}.txt`,
-        full: `rules/full/${listName}.txt`
-      }
-    };
+    index[listName] = collectFilters(resolved[listName.toUpperCase()]?.entries ?? []);
   }
 
   return index;
+}
+
+function hasOwn<T extends object>(object: T, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
 }
 
 function collectFilters(entries: DomainRule[]): string[] {
