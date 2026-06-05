@@ -4,7 +4,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 
 ## Endpoints
 
-- `GET /geosite`
+- `GET /geosite` returns `{ [listName]: filters[] }`
 - `GET /geosite/:name_with_filter` (default mode: `balanced`)
 - `GET /geosite/:mode/:name_with_filter` where mode is `strict|balanced|full`
 
@@ -13,7 +13,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 - `scheduled`:
   - HEAD upstream ZIP to check ETag.
   - If ETag unchanged: update check timestamp only.
-  - If ETag changed: download ZIP once, extract `data/*`, write snapshot + index to R2, then update `state/latest.json`.
+  - If ETag changed: download ZIP once, extract `data/*`, resolve lists, write snapshot + compact filter index to R2, then update `state/latest.json`.
 - `fetch`:
   - Route `/geosite*` requests to API handlers.
   - API handlers read latest state from R2.
@@ -21,7 +21,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
   - On miss, compile on-demand from snapshot and cache artifact.
   - Unknown filters are served as empty output but are not persisted as artifacts.
   - If previous ETag artifact exists, return stale artifact immediately and refresh latest artifact in background (`waitUntil`).
-  - On first successful compile for a list, lazily enrich index `filters` for that list.
+  - The public index is built completely during refresh and is not mutated by ruleset requests.
 
 ## R2 Layout
 

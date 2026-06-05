@@ -43,7 +43,7 @@ RULE-SET,https://surge.bojin.co/geosite/strict/category-ads-all,REJECT
 
 ### API
 
-- `GET /geosite`
+- `GET /geosite` returns `{ [listName]: filters[] }`
 - `GET /geosite/:name_with_filter` (default mode: `balanced`)
 - `GET /geosite/:mode/:name_with_filter`
 

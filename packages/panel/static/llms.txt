@@ -15,7 +15,7 @@ Specific endpoints can be requested for a user task. Bulk crawling or indexing e
 ## Key Resources
 
 - [Full LLM reference](https://surge.bojin.co/llms-full.txt): Complete API behavior, mode details, error handling, and examples.
-- [Available geosite index](https://surge.bojin.co/geosite): Available list names and metadata.
+- [Available geosite index](https://surge.bojin.co/geosite): Available list names and known filters.
 - [English dashboard](https://surge.bojin.co/en): Human UI for discovering lists and copying URLs.
 - [Chinese dashboard](https://surge.bojin.co/zh): Chinese human UI for discovering lists and copying URLs.
 

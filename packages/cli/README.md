@@ -18,3 +18,5 @@ Development/debug helper for generating geosite artifacts locally.
 - `<out>/stats/lists/<list>.json`
 
 `balanced` is the default serving mode.
+
+`index/geosite.json` is a compact `{ [listName]: filters[] }` index.

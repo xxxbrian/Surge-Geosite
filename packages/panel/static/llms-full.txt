@@ -35,28 +35,20 @@ Artifacts are intended for specific on-demand URLs. Bulk crawling every list, mo
 
 ### `GET /geosite`
 
-Returns the available geosite index. This endpoint provides list names and metadata.
+Returns the available geosite index. This endpoint provides list names and known filters.
 
 Index contents:
 
 - List names such as `google`, `apple`, or `category-ads-all`.
-- Known filters when metadata is available.
-- Source-file metadata for each list.
+- Sorted filter arrays for each list.
+- An empty array means no known filters for that list.
 
 Approximate JSON shape:
 
 ```json
 {
-  "google": {
-    "name": "GOOGLE",
-    "sourceFile": "google",
-    "filters": ["cn"],
-    "modes": {
-      "strict": "rules/strict/google.txt",
-      "balanced": "rules/balanced/google.txt",
-      "full": "rules/full/google.txt"
-    }
-  }
+  "apple": ["cn"],
+  "google": []
 }
 ```
 
@@ -144,7 +136,7 @@ Most permissive conversion. It aims for maximum coverage and can have higher ove
 - Examples: `google`, `apple`, `github`, `category-ads-all`.
 - Filters are lowercase attributes appended with `@`.
 - Example: `apple@cn` means list `apple` filtered to entries tagged `cn`.
-- Not all lists have filters. `/geosite` contains known filter metadata when available.
+- Not all lists have filters. `/geosite` contains sorted known filter arrays.
 
 ## URL Encoding
 

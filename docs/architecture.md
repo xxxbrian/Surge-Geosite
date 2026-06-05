@@ -41,7 +41,7 @@ Recommended route priority:
 
 ## API Surface
 
-- `GET /geosite`
+- `GET /geosite` returns `{ [listName]: filters[] }`
 - `GET /geosite/:name_with_filter` (default mode: `balanced`)
 - `GET /geosite/:mode/:name_with_filter`
 
