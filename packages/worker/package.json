@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "@surge-geosite/core": "workspace:*",
-    "fflate": "^0.8.2"
+    "fflate": "^0.8.3"
   },
   "devDependencies": {
-    "wrangler": "^4.82.2"
+    "wrangler": "^4.98.0"
   }
 }

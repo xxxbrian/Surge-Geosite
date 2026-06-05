@@ -1,7 +1,7 @@
 {
   "name": "surge-geosite",
   "private": true,
-  "packageManager": "pnpm@10.0.0",
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
@@ -19,8 +19,8 @@
     "worker:r2:create": "pnpm --filter @surge-geosite/worker exec wrangler r2 bucket create surge-geosite"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.4"
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
