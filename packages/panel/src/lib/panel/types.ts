@@ -1,13 +1,7 @@
 export type PanelLocale = 'zh' | 'en';
 export type PanelMode = 'strict' | 'balanced' | 'full';
 
-export interface GeositeIndexItem {
-	name?: string;
-	sourceFile?: string;
-	filters?: string[];
-}
-
-export type GeositeIndex = Record<string, GeositeIndexItem>;
+export type GeositeIndex = Record<string, string[]>;
 
 export interface RulesMeta {
 	etag: string;

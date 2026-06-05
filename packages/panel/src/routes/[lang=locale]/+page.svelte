@@ -90,8 +90,7 @@
 	applyServerData(data);
 	$: applyServerData(data);
 
-	$: selectedInfo = selected ? index[selected] : undefined;
-	$: availableFilters = selectedInfo?.filters ?? [];
+	$: availableFilters = selected ? (index[selected] ?? []) : [];
 	$: filteredNames = (() => {
 		const query = search.trim().toLowerCase();
 		if (!query) {
@@ -311,9 +310,7 @@
 			}
 
 			const fullIndex = (await response.json()) as GeositeIndex;
-			if (Object.keys(fullIndex).length > Object.keys(index).length) {
-				index = fullIndex;
-			}
+			index = fullIndex;
 		} catch {
 			// Keep current partial index when hydration fetch fails.
 		} finally {
@@ -480,7 +477,7 @@
 							>
 								<span class="font-mono">{name}</span>
 									<span class="text-muted-foreground font-mono text-xs">
-										@{index[name] ? (index[name]?.filters?.length ?? 0) : '-'}
+										@{index[name] ? index[name].length : '-'}
 									</span>
 									</button>
 								{/each}
@@ -499,7 +496,7 @@
 				<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 					<div>
 						<p class="text-muted-foreground text-xs font-semibold tracking-[0.14em]">{tr('selectedDataset')}</p>
-						<h2 class="mt-1 font-mono text-xl font-semibold">{selectedInfo?.name ?? selected ?? '-'}</h2>
+						<h2 class="mt-1 font-mono text-xl font-semibold">{selected ?? '-'}</h2>
 					</div>
 
 					<div class="inline-flex overflow-hidden rounded-md border">
@@ -591,10 +588,6 @@
 					<section>
 						<h4 class="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.14em]">{tr('datasetInfo')}</h4>
 						<div class="text-muted-foreground space-y-1 text-xs">
-							<p>
-								<span>{tr('sourceFile')} </span>
-								<span class="font-mono">{selectedInfo?.sourceFile ?? '-'}</span>
-							</p>
 							<p>
 								<span>{tr('filterCount')} </span>
 								<span class="font-mono">{availableFilters.length}</span>

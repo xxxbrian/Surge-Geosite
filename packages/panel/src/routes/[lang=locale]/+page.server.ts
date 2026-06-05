@@ -141,14 +141,14 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		} else {
 			selected = names[0];
 			const initialIndex: GeositeIndex = {};
-				for (const name of names.slice(0, SSR_INITIAL_LIST_LIMIT)) {
+			for (const name of names.slice(0, SSR_INITIAL_LIST_LIMIT)) {
 				const entry = fullIndex[name];
-				if (entry) {
+				if (entry !== undefined) {
 					initialIndex[name] = entry;
 				}
 			}
 			const selectedEntry = fullIndex[selected];
-			if (selectedEntry) {
+			if (selectedEntry !== undefined) {
 				initialIndex[selected] = selectedEntry;
 			}
 			index = initialIndex;
