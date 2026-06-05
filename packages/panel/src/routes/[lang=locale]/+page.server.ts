@@ -13,6 +13,7 @@ const INDEX_REVALIDATE_INTERVAL_MS = 20_000;
 type IndexCacheEntry = {
 	fullIndex: GeositeIndex;
 	names: string[];
+	indexEtag: string;
 	upstreamEtag: string;
 };
 
@@ -42,6 +43,10 @@ function getUpstreamEtagRaw(headers: Headers): string {
 	return headers.get('x-upstream-etag') ?? headers.get('etag') ?? '-';
 }
 
+function getIndexEtagRaw(headers: Headers): string {
+	return headers.get('etag') ?? getUpstreamEtagRaw(headers);
+}
+
 async function fetchIndexFresh(fetchFn: typeof fetch): Promise<IndexCacheEntry> {
 	const response = await fetchFn('/geosite', {
 		headers: {
@@ -54,11 +59,13 @@ async function fetchIndexFresh(fetchFn: typeof fetch): Promise<IndexCacheEntry> 
 
 	const fullIndex = (await response.json()) as GeositeIndex;
 	const names = Object.keys(fullIndex).sort();
+	const indexEtag = getIndexEtagRaw(response.headers);
 	const upstreamEtag = getUpstreamEtagRaw(response.headers);
 
 	const next: IndexCacheEntry = {
 		fullIndex,
 		names,
+		indexEtag,
 		upstreamEtag
 	};
 	indexCache = next;
@@ -80,7 +87,7 @@ async function maybeRevalidateIndex(fetchFn: typeof fetch): Promise<void> {
 		const response = await fetchFn('/geosite', {
 			headers: {
 				accept: 'application/json',
-					'if-none-match': indexCache.upstreamEtag
+				'if-none-match': indexCache.indexEtag
 			}
 		});
 		if (response.status === 304) {
@@ -94,6 +101,7 @@ async function maybeRevalidateIndex(fetchFn: typeof fetch): Promise<void> {
 		indexCache = {
 			fullIndex,
 			names: Object.keys(fullIndex).sort(),
+			indexEtag: getIndexEtagRaw(response.headers),
 			upstreamEtag: getUpstreamEtagRaw(response.headers)
 		};
 	} catch {

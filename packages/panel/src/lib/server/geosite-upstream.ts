@@ -25,7 +25,14 @@ export async function fetchGeositeUpstream({
 	url: URL;
 	platform: unknown;
 }): Promise<Response> {
-	const accept = request.headers.get('accept') ?? '*/*';
+	const headers = new Headers({
+		accept: request.headers.get('accept') ?? '*/*'
+	});
+	const ifNoneMatch = request.headers.get('if-none-match');
+	if (ifNoneMatch) {
+		headers.set('if-none-match', ifNoneMatch);
+	}
+
 	const serviceBinding = getGeositeServiceBinding(platform);
 
 	if (!serviceBinding) {
@@ -34,8 +41,6 @@ export async function fetchGeositeUpstream({
 
 	const internalUrl = `https://geosite.internal${url.pathname}${url.search}`;
 	return serviceBinding.fetch(internalUrl, {
-		headers: {
-			accept
-		}
+		headers
 	});
 }
