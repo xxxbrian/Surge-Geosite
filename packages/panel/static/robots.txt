@@ -1,12 +1,3 @@
 User-agent: *
-Allow: /en
-Allow: /zh
-Allow: /llms.txt
-Allow: /llms-full.txt
-Disallow: /geosite
-Disallow: /geosite/
-Disallow: /geosite-srs
-Disallow: /geosite-srs/
-Disallow: /geosite-mrs
-Disallow: /geosite-mrs/
+Allow: /
 Sitemap: https://surge.bojin.co/sitemap.xml

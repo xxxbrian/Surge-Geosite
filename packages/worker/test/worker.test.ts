@@ -317,10 +317,12 @@ describe("worker fetch routes", () => {
     const worker = createWorker({ fetchImpl });
     const indexResponse = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
     expect(indexResponse.status).toBe(503);
+    expect(indexResponse.headers.get("x-robots-tag")).toBe("noindex");
     expect(await indexResponse.json()).toEqual({ ok: false, error: "geosite data not ready" });
 
     const rulesResponse = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
     expect(rulesResponse.status).toBe(503);
+    expect(rulesResponse.headers.get("x-robots-tag")).toBe("noindex");
     expect(await rulesResponse.text()).toBe("geosite data not ready");
     expect(calls).toEqual([]);
   });
@@ -359,6 +361,7 @@ describe("worker fetch routes", () => {
 
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, ctx);
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
     const body = await response.text();
     expect(body).toContain("DOMAIN-SUFFIX,google.com");
     expect(body).not.toContain("mail.google.com");
@@ -395,6 +398,7 @@ describe("worker fetch routes", () => {
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
     expect(response.headers.get("etag")).toBe('"geosite-index-v2:etag-index-v1"');
     expect(await response.json()).toEqual({
       apple: ["cn"],
@@ -409,6 +413,7 @@ describe("worker fetch routes", () => {
       new TestContext()
     );
     expect(notModified.status).toBe(304);
+    expect(notModified.headers.get("x-robots-tag")).toBe("noindex");
   });
 
   test("returns stale artifact and refreshes latest in background", async () => {
@@ -677,10 +682,12 @@ describe("worker fetch routes", () => {
 
     const first = await worker.fetch(new Request("https://example.com/geosite-srs/apple"), env, new TestContext());
     expect(first.status).toBe(200);
+    expect(first.headers.get("x-robots-tag")).toBe("noindex");
     expect(new Uint8Array(await first.arrayBuffer())).toEqual(payload);
 
     const second = await worker.fetch(new Request("https://example.com/geosite-srs/apple"), env, new TestContext());
     expect(second.status).toBe(200);
+    expect(second.headers.get("x-robots-tag")).toBe("noindex");
     expect(new Uint8Array(await second.arrayBuffer())).toEqual(payload);
     expect(calls).toBe(1);
   });
@@ -819,10 +826,12 @@ describe("worker fetch routes", () => {
 
     const first = await worker.fetch(new Request("https://example.com/geosite-mrs/adblock"), env, new TestContext());
     expect(first.status).toBe(200);
+    expect(first.headers.get("x-robots-tag")).toBe("noindex");
     expect(new Uint8Array(await first.arrayBuffer())).toEqual(payload);
 
     const second = await worker.fetch(new Request("https://example.com/geosite-mrs/adblock"), env, new TestContext());
     expect(second.status).toBe(200);
+    expect(second.headers.get("x-robots-tag")).toBe("noindex");
     expect(new Uint8Array(await second.arrayBuffer())).toEqual(payload);
     expect(calls).toBe(1);
 
@@ -856,6 +865,7 @@ describe("worker fetch routes", () => {
 
     const response = await worker.fetch(new Request("https://example.com/"), env, new TestContext());
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-robots-tag")).toBeNull();
     expect(await response.text()).toContain("panel");
   });
 });

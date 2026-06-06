@@ -20,6 +20,7 @@ const LATEST_STATE_KEY = "state/latest.json";
 const GEOSITE_INDEX_SCHEMA_VERSION = 2;
 const SNAPSHOT_CACHE_LIMIT = 2;
 const RESOLVED_CACHE_LIMIT = 2;
+const GEOSITE_ROBOTS_TAG = "noindex";
 
 const VALID_LIST_NAME = /^[a-z0-9!-]+$/;
 const VALID_ATTR_NAME = /^[a-z0-9!-]+$/;
@@ -160,13 +161,29 @@ export function createWorker(deps: WorkerDeps = {}): {
 
   return {
     async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
-      return handleFetch(request, env, ctx, { now, fetchImpl });
+      const response = await handleFetch(request, env, ctx, { now, fetchImpl });
+      return withGeositeRobotsTag(request, response);
     },
 
     async scheduled(_event: ScheduledEventLike, env: WorkerEnv, _ctx: ExecutionContextLike): Promise<void> {
       await refreshGeositeRun(env, { now, fetchImpl });
     }
   };
+}
+
+function withGeositeRobotsTag(request: Request, response: Response): Response {
+  const { pathname } = new URL(request.url);
+  if (!pathname.startsWith("/geosite")) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("x-robots-tag", GEOSITE_ROBOTS_TAG);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
 }
 
 export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): Promise<RefreshResult> {
