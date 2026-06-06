@@ -8,12 +8,6 @@
 
 Surge Geosite is an HTTP service and dashboard for discovering geosite lists and generating rule URLs. It is designed for specific rule URL generation, not for mirroring the entire dataset.
 
-## Access Policy
-
-The `/geosite*`, `/geosite-srs*`, and `/geosite-mrs*` endpoints are API/artifact endpoints. They are disallowed in `robots.txt` to prevent search-engine indexing of generated resources, not to prohibit user-directed, on-demand API use.
-
-Specific endpoints can be requested for a user task. Bulk crawling or indexing every generated artifact is discouraged.
-
 The main human entry points are:
 
 - [English dashboard](https://surge.bojin.co/en)
@@ -29,7 +23,7 @@ For simple usage discovery, `/geosite` provides the available list index. `balan
 
 Filters use the `{name}@{filter}` suffix, such as `apple@cn`. sing-box artifacts are under `/geosite-srs/{name}`. Mihomo artifacts are under `/geosite-mrs/{name}`.
 
-Artifacts are intended for specific on-demand URLs. Bulk crawling every list, mode, and filter combination is discouraged.
+Artifacts are intended for specific on-demand URLs. Bulk fetching every list, mode, and filter combination is discouraged.
 
 ## API Reference
 
@@ -229,8 +223,8 @@ Generated artifacts are cached by upstream version, mode, list name, and optiona
 
 ## Operational Notes And Limits
 
-- Bulk crawling every `/geosite/{mode}/{name}` combination is discouraged.
-- Bulk crawling every filter combination is discouraged.
+- Bulk fetching every `/geosite/{mode}/{name}` combination is discouraged.
+- Bulk fetching every filter combination is discouraged.
 - `full` is not the safest or default mode.
 - Not every list has filters.
 - SRS and MRS artifacts may not exist for every geosite list.

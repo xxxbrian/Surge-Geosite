@@ -6,12 +6,6 @@
 
 This file is a concise LLM-readable summary. For full API behavior, examples, and implementation details, read [`/llms-full.txt`](https://surge.bojin.co/llms-full.txt).
 
-## Access Policy
-
-The `/geosite*`, `/geosite-srs*`, and `/geosite-mrs*` endpoints are API/artifact endpoints. They are disallowed in `robots.txt` to prevent search-engine indexing of generated resources, not to prohibit user-directed, on-demand API use.
-
-Specific endpoints can be requested for a user task. Bulk crawling or indexing every generated artifact is discouraged.
-
 ## Key Resources
 
 - [Full LLM reference](https://surge.bojin.co/llms-full.txt): Complete API behavior, mode details, error handling, and examples.
@@ -47,7 +41,7 @@ Specific endpoints can be requested for a user task. Bulk crawling or indexing e
 - `balanced` is the normal default mode.
 - `strict` is the conservative mode.
 - `full` is the broadest mode and can over-match more than `balanced`.
-- Artifacts are intended for on-demand use. Bulk crawling every list, mode, and filter combination is discouraged.
+- Artifacts are intended for on-demand use. Bulk fetching every list, mode, and filter combination is discouraged.
 
 ## Examples
 
