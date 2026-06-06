@@ -162,7 +162,8 @@ export function createWorker(deps: WorkerDeps = {}): {
   return {
     async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
       const response = await handleFetch(request, env, ctx, { now, fetchImpl });
-      return withGeositeRobotsTag(request, response);
+      const tagged = withGeositeRobotsTag(request, response);
+      return withoutBodyForHead(request, tagged);
     },
 
     async scheduled(_event: ScheduledEventLike, env: WorkerEnv, _ctx: ExecutionContextLike): Promise<void> {
@@ -183,6 +184,18 @@ function withGeositeRobotsTag(request: Request, response: Response): Response {
     status: response.status,
     statusText: response.statusText,
     headers
+  });
+}
+
+function withoutBodyForHead(request: Request, response: Response): Response {
+  if (request.method !== "HEAD") {
+    return response;
+  }
+
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers
   });
 }
 
@@ -327,7 +340,7 @@ async function handleFetch(
   ctx: ExecutionContextLike,
   deps: { now: () => number; fetchImpl: typeof fetch }
 ): Promise<Response> {
-  if (request.method !== "GET") {
+  if (request.method !== "GET" && request.method !== "HEAD") {
     return text(405, "method not allowed");
   }
 

@@ -416,6 +416,55 @@ describe("worker fetch routes", () => {
     expect(notModified.headers.get("x-robots-tag")).toBe("noindex");
   });
 
+  test("supports HEAD for geosite index with conditional etag", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+
+    await bucket.putJson("state/latest.json", {
+      upstream: {
+        zipUrl: "https://example.com/master.zip",
+        etag: "etag-head-index-v1"
+      },
+      snapshot: {
+        sourceKey: "snapshots/etag-head-index-v1/sources.json.gz",
+        indexKey: "snapshots/etag-head-index-v1/index/geosite.json",
+        listCount: 1,
+        generatedAt: "2026-02-15T00:00:00.000Z"
+      },
+      previousEtag: null,
+      checkedAt: "2026-02-15T00:00:00.000Z"
+    });
+    await bucket.putJson("snapshots/etag-head-index-v1/index/geosite.json", {
+      google: []
+    });
+
+    const worker = createWorker();
+    const response = await worker.fetch(
+      new Request("https://example.com/geosite", {
+        method: "HEAD"
+      }),
+      env,
+      new TestContext()
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("etag")).toBe('"geosite-index-v2:etag-head-index-v1"');
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await response.text()).toBe("");
+
+    const notModified = await worker.fetch(
+      new Request("https://example.com/geosite", {
+        method: "HEAD",
+        headers: { "if-none-match": '"geosite-index-v2:etag-head-index-v1"' }
+      }),
+      env,
+      new TestContext()
+    );
+    expect(notModified.status).toBe(304);
+    expect(notModified.headers.get("etag")).toBe('"geosite-index-v2:etag-head-index-v1"');
+    expect(notModified.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await notModified.text()).toBe("");
+  });
+
   test("returns stale artifact and refreshes latest in background", async () => {
     const bucket = new MemoryR2Bucket();
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
@@ -733,6 +782,84 @@ describe("worker fetch routes", () => {
     expect(second.status).toBe(200);
     expect(new Uint8Array(await second.arrayBuffer())).toEqual(payload);
     expect(second.headers.get("x-stale")).toBe("1");
+    expect(calls).toBe(2);
+  });
+
+  test("HEAD revalidates expired geosite-srs cache and returns headers without body", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = {
+      GEOSITE_BUCKET: bucket,
+      SRS_CACHE_TTL_SECONDS: "1"
+    };
+    const payload = strToU8("srs-body");
+    let calls = 0;
+    let nowMs = Date.parse("2026-02-15T00:00:00.000Z");
+
+    const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      calls += 1;
+      expect(init?.headers).toBeDefined();
+      return new Response(calls === 1 ? payload : null, {
+        status: calls === 1 ? 200 : 304,
+        headers: {
+          etag: '"srs-etag-v1"',
+          "content-type": "application/octet-stream"
+        }
+      });
+    };
+
+    const worker = createWorker({
+      now: () => nowMs,
+      fetchImpl
+    });
+
+    const first = await worker.fetch(new Request("https://example.com/geosite-srs/apple"), env, new TestContext());
+    expect(first.status).toBe(200);
+    const etag = first.headers.get("etag");
+    expect(etag).toBe('"geosite-srs:geosite-apple.srs:srs-etag-v1"');
+    expect(new Uint8Array(await first.arrayBuffer())).toEqual(payload);
+
+    nowMs += 2000;
+    const headCtx = new TestContext();
+    const head = await worker.fetch(
+      new Request("https://example.com/geosite-srs/apple", {
+        method: "HEAD"
+      }),
+      env,
+      headCtx
+    );
+    expect(head.status).toBe(200);
+    expect(head.headers.get("etag")).toBe(etag);
+    expect(head.headers.get("x-robots-tag")).toBe("noindex");
+    expect(head.headers.get("x-stale")).toBe("1");
+    expect((await head.arrayBuffer()).byteLength).toBe(0);
+    expect(calls).toBe(2);
+    await headCtx.drain();
+
+    const conditional = await worker.fetch(
+      new Request("https://example.com/geosite-srs/apple", {
+        method: "HEAD",
+        headers: { "if-none-match": etag ?? "" }
+      }),
+      env,
+      new TestContext()
+    );
+    expect(conditional.status).toBe(304);
+    expect(conditional.headers.get("etag")).toBe(etag);
+    expect(conditional.headers.get("x-robots-tag")).toBe("noindex");
+    expect((await conditional.arrayBuffer()).byteLength).toBe(0);
+    expect(calls).toBe(2);
+
+    const fresh = await worker.fetch(
+      new Request("https://example.com/geosite-srs/apple", {
+        method: "HEAD"
+      }),
+      env,
+      new TestContext()
+    );
+    expect(fresh.status).toBe(200);
+    expect(fresh.headers.get("etag")).toBe(etag);
+    expect(fresh.headers.get("x-stale")).toBeNull();
+    expect((await fresh.arrayBuffer()).byteLength).toBe(0);
     expect(calls).toBe(2);
   });
 
