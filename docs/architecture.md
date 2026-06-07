@@ -21,11 +21,11 @@ Recommended route priority:
 ## Refresh Pipeline
 
 1. Cron runs every 5 minutes.
-2. Worker sends `HEAD` to upstream ZIP (`v2fly/domain-list-community`).
+2. Worker sends `HEAD` to the upstream YAML release asset (`dlc.dat_plain.yml`).
 3. If ETag unchanged: only update check timestamp.
 4. If ETag changed:
-   - Download ZIP once.
-   - Extract `data/*` sources.
+   - Download YAML once.
+   - Normalize YAML rules into source text.
    - Validate parse/resolve.
    - Write snapshot and index to R2.
    - Atomically switch `state/latest.json`.
@@ -33,10 +33,10 @@ Recommended route priority:
 ## Serve Pipeline
 
 1. Read `state/latest.json`.
-2. Try `artifacts/{etag}/{mode}/{name[@filter]}.txt`.
+2. Try `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`.
 3. If hit: return immediately.
 4. If miss:
-   - Optionally return stale artifact from previous ETag (non-filter path), then rebuild latest in background.
+   - Optionally return stale artifact from previous cache key (non-filter path), then rebuild latest in background.
    - Otherwise build on demand and write artifact.
 
 ## API Surface
@@ -59,9 +59,9 @@ Recommended route priority:
 ## R2 Storage Layout
 
 - `state/latest.json`
-- `snapshots/{etag}/sources.json.gz`
-- `snapshots/{etag}/index/geosite.json`
-- `artifacts/{etag}/{mode}/{name[@filter]}.txt`
+- `snapshots/{cacheKey}/sources.json.gz`
+- `snapshots/{cacheKey}/index/geosite.json`
+- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
 
 ## Operations
 

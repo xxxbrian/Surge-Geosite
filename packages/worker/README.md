@@ -11,24 +11,24 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 ## Runtime Model
 
 - `scheduled`:
-  - HEAD upstream ZIP to check ETag.
+  - HEAD upstream YAML release asset to check ETag, falling back to GET when HEAD has no usable ETag.
   - If ETag unchanged: update check timestamp only.
-  - If ETag changed: download ZIP once, extract `data/*`, resolve lists, write snapshot + compact filter index to R2, then update `state/latest.json`.
+  - If ETag changed: download `dlc.dat_plain.yml`, normalize rules, resolve lists, write snapshot + compact filter index to R2, then update `state/latest.json`.
 - `fetch`:
   - Route `/geosite*` requests to API handlers.
   - API handlers read latest state from R2.
-  - Serve prebuilt artifact from `artifacts/{etag}/{mode}/{name[@filter]}.txt` when available.
+  - Serve prebuilt artifact from `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt` when available.
   - On miss, compile on-demand from snapshot and cache artifact.
   - Unknown filters are served as empty output but are not persisted as artifacts.
-  - If previous ETag artifact exists, return stale artifact immediately and refresh latest artifact in background (`waitUntil`).
+  - If previous cache artifact exists, return stale artifact immediately and refresh latest artifact in background (`waitUntil`).
   - The public index is built completely during refresh and is not mutated by ruleset requests.
 
 ## R2 Layout
 
 - `state/latest.json`
-- `snapshots/{etag}/sources.json.gz`
-- `snapshots/{etag}/index/geosite.json`
-- `artifacts/{etag}/{mode}/{name[@filter]}.txt`
+- `snapshots/{cacheKey}/sources.json.gz`
+- `snapshots/{cacheKey}/index/geosite.json`
+- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
 
 Retention:
 
@@ -40,7 +40,7 @@ Retention:
 `packages/worker/wrangler.toml` includes:
 
 - `[triggers] crons = ["*/5 * * * *"]`
-- `[vars]` for `UPSTREAM_ZIP_URL` and `UPSTREAM_USER_AGENT`
+- `[vars]` for `UPSTREAM_YAML_URL` and `UPSTREAM_USER_AGENT`
 - `[[r2_buckets]]` binding `GEOSITE_BUCKET`
 
 ## Scripts

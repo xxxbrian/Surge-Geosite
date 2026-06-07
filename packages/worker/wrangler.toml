@@ -13,7 +13,7 @@ routes = [
 enabled = true
 
 [vars]
-UPSTREAM_ZIP_URL = "https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip"
+UPSTREAM_YAML_URL = "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat_plain.yml"
 UPSTREAM_USER_AGENT = "surge-geosite-worker/2"
 SRS_UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set"
 SRS_UPSTREAM_USER_AGENT = "surge-geosite-worker/2"

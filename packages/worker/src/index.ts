@@ -6,9 +6,11 @@ import {
   type RegexMode,
   type ResolvedList
 } from "@surge-geosite/core";
-import { gunzipSync, gzipSync, strFromU8, strToU8, unzipSync } from "fflate";
+import { gunzipSync, gzipSync, strFromU8, strToU8 } from "fflate";
+import { parse as parseYaml } from "yaml";
 
-const DEFAULT_UPSTREAM_ZIP_URL = "https://github.com/v2fly/domain-list-community/archive/refs/heads/master.zip";
+const DEFAULT_UPSTREAM_YAML_URL =
+  "https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat_plain.yml";
 const DEFAULT_UPSTREAM_USER_AGENT = "surge-geosite-worker/2";
 const DEFAULT_SRS_UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set";
 const DEFAULT_SRS_UPSTREAM_USER_AGENT = "surge-geosite-worker/2";
@@ -55,7 +57,7 @@ export interface AssetsBindingLike {
 export interface WorkerEnv {
   GEOSITE_BUCKET: R2BucketLike;
   ASSETS?: AssetsBindingLike;
-  UPSTREAM_ZIP_URL?: string;
+  UPSTREAM_YAML_URL?: string;
   UPSTREAM_USER_AGENT?: string;
   SRS_UPSTREAM_BASE_URL?: string;
   SRS_UPSTREAM_USER_AGENT?: string;
@@ -81,8 +83,9 @@ interface WorkerDeps {
 
 interface LatestState {
   upstream: {
-    zipUrl: string;
+    yamlUrl: string;
     etag: string;
+    cacheKey: string;
   };
   snapshot: {
     sourceKey: string;
@@ -90,16 +93,23 @@ interface LatestState {
     listCount: number;
     generatedAt: string;
   };
-  previousEtag: string | null;
+  previousCacheKey: string | null;
   checkedAt: string;
 }
 
 interface SnapshotPayload {
-  version: 1;
+  version: 2;
   etag: string;
-  zipUrl: string;
+  yamlUrl: string;
+  cacheKey: string;
   generatedAt: string;
   lists: Record<string, string>;
+}
+
+interface DlcPlainYamlList {
+  name: unknown;
+  length?: unknown;
+  rules: unknown;
 }
 
 type GeositeIndex = Record<string, string[]>;
@@ -203,23 +213,13 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   const now = deps.now ?? (() => Date.now());
   const fetchImpl = resolveFetchImpl(deps.fetchImpl);
   const checkedAt = new Date(now()).toISOString();
-  const zipUrl = env.UPSTREAM_ZIP_URL ?? DEFAULT_UPSTREAM_ZIP_URL;
+  const yamlUrl = env.UPSTREAM_YAML_URL ?? DEFAULT_UPSTREAM_YAML_URL;
   const userAgent = env.UPSTREAM_USER_AGENT ?? DEFAULT_UPSTREAM_USER_AGENT;
 
   const current = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
 
-  const headResponse = await fetchImpl(zipUrl, {
-    method: "HEAD",
-    headers: {
-      "user-agent": userAgent
-    }
-  });
-  if (!headResponse.ok) {
-    throw new Error(`failed to check upstream zip: ${headResponse.status} ${headResponse.statusText}`);
-  }
-
-  const observedHeadEtag = normalizeEtag(headResponse.headers.get("etag"));
-  if (observedHeadEtag && current?.upstream.etag === observedHeadEtag) {
+  const observedHeadEtag = await checkUpstreamYamlEtag(yamlUrl, userAgent, fetchImpl);
+  if (observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
@@ -235,20 +235,21 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
     };
   }
 
-  const downloadResponse = await fetchImpl(zipUrl, {
+  const downloadResponse = await fetchImpl(yamlUrl, {
     headers: {
       "user-agent": userAgent
     }
   });
   if (!downloadResponse.ok) {
-    throw new Error(`failed to download upstream zip: ${downloadResponse.status} ${downloadResponse.statusText}`);
+    throw new Error(`failed to download upstream yaml: ${downloadResponse.status} ${downloadResponse.statusText}`);
   }
 
-  const zipBytes = new Uint8Array(await downloadResponse.arrayBuffer());
+  const yamlBytes = new Uint8Array(await downloadResponse.arrayBuffer());
   const downloadedEtag = normalizeEtag(downloadResponse.headers.get("etag"));
-  const computedEtag = downloadedEtag ?? observedHeadEtag ?? (await sha256Hex(zipBytes));
+  const computedEtag = downloadedEtag ?? observedHeadEtag ?? (await sha256Hex(yamlBytes));
+  const cacheKey = safeCacheKey(computedEtag);
 
-  if (current?.upstream.etag === computedEtag) {
+  if (current?.upstream.yamlUrl === yamlUrl && current.upstream.cacheKey === cacheKey) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
@@ -264,23 +265,24 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
     };
   }
 
-  const sources = extractSourcesFromZip(zipBytes);
+  const sources = parseSourcesFromDlcPlainYaml(strFromU8(yamlBytes));
   const listCount = Object.keys(sources).length;
   if (listCount === 0) {
-    throw new Error("no geosite data files found in upstream zip");
+    throw new Error("no geosite data found in upstream yaml");
   }
   // Validate snapshot can be parsed and resolved before publishing it as latest.
   const parsed = parseListsFromText(sources);
   const resolved = resolveAllLists(parsed);
 
   const generatedAt = new Date(now()).toISOString();
-  const sourceKey = snapshotSourceKey(computedEtag);
-  const indexKey = snapshotIndexKey(computedEtag);
+  const sourceKey = snapshotSourceKey(cacheKey);
+  const indexKey = snapshotIndexKey(cacheKey);
 
   const snapshotPayload: SnapshotPayload = {
-    version: 1,
+    version: 2,
     etag: computedEtag,
-    zipUrl,
+    yamlUrl,
+    cacheKey,
     generatedAt,
     lists: sources
   };
@@ -296,8 +298,9 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
 
   const nextState: LatestState = {
     upstream: {
-      zipUrl,
-      etag: computedEtag
+      yamlUrl,
+      etag: computedEtag,
+      cacheKey
     },
     snapshot: {
       sourceKey,
@@ -305,12 +308,12 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
       listCount,
       generatedAt
     },
-    previousEtag: current?.upstream.etag ?? null,
+    previousCacheKey: current?.upstream.cacheKey ?? null,
     checkedAt
   };
 
   const latestBeforeWrite = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
-  if (latestBeforeWrite && latestBeforeWrite.upstream.etag !== current?.upstream.etag) {
+  if (latestBeforeWrite && latestBeforeWrite.upstream.cacheKey !== current?.upstream.cacheKey) {
     return {
       updated: false,
       reason: "etag-unchanged",
@@ -515,11 +518,12 @@ async function handleGeositeIndex(request: Request, env: WorkerEnv, ctx: Executi
     return json(503, { ok: false, error: "geosite data not ready" });
   }
 
-  const indexEtag = buildIndexEtag(latest.upstream.etag);
+  const indexEtag = buildIndexEtag(latest.upstream.cacheKey);
   const indexHeaders = {
     "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=900",
     etag: indexEtag,
     "x-upstream-etag": latest.upstream.etag,
+    "x-upstream-format": "yaml",
     "x-generated-at": latest.snapshot.generatedAt,
     "x-checked-at": latest.checkedAt
   };
@@ -557,11 +561,11 @@ async function handleGeositeRules(
     return text(503, "geosite data not ready");
   }
 
-  const latestKey = artifactKey(latest.upstream.etag, mode, name, filter);
+  const latestKey = artifactKey(latest.upstream.cacheKey, mode, name, filter);
   const latestArtifact = await readText(env.GEOSITE_BUCKET, latestKey);
   if (latestArtifact !== null) {
-    const responseEtag = buildRulesEtag(latest.upstream.etag, mode, name, filter);
-    const headers = responseHeaders(latest.upstream.etag, mode, name, filter, false);
+    const responseEtag = buildRulesEtag(latest.upstream.cacheKey, mode, name, filter);
+    const headers = responseHeaders(latest, mode, name, filter, false);
     if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
       return notModified(headers);
     }
@@ -575,12 +579,12 @@ async function handleGeositeRules(
 
   const compilePromise = ensureArtifactForLatest(env, latest, mode, name, filter);
 
-  if (!filter && latest.previousEtag && index && hasOwn(index, name)) {
-    const staleKey = artifactKey(latest.previousEtag, mode, name, filter);
+  if (!filter && latest.previousCacheKey && index && hasOwn(index, name)) {
+    const staleKey = artifactKey(latest.previousCacheKey, mode, name, filter);
     const staleArtifact = await readText(env.GEOSITE_BUCKET, staleKey);
     if (staleArtifact !== null) {
-      const responseEtag = buildRulesEtag(latest.previousEtag, mode, name, filter);
-      const headers = responseHeaders(latest.previousEtag, mode, name, filter, true);
+      const responseEtag = buildRulesEtag(latest.previousCacheKey, mode, name, filter);
+      const headers = responseHeaders(latest, mode, name, filter, true, latest.previousCacheKey);
       ctx.waitUntil(compilePromise.catch(() => undefined));
 
       if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
@@ -595,8 +599,8 @@ async function handleGeositeRules(
     return text(404, `list not found: ${name}`);
   }
 
-  const responseEtag = buildRulesEtag(latest.upstream.etag, mode, name, filter);
-  const headers = responseHeaders(latest.upstream.etag, mode, name, filter, false);
+  const responseEtag = buildRulesEtag(latest.upstream.cacheKey, mode, name, filter);
+  const headers = responseHeaders(latest, mode, name, filter, false);
   if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
     return notModified(headers);
   }
@@ -619,20 +623,22 @@ function splitNameFilter(input: string): { name: string; filter: string | null }
 }
 
 function responseHeaders(
-  etag: string,
+  latest: LatestState,
   mode: RegexMode,
   name: string,
   filter: string | null,
-  stale: boolean
+  stale: boolean,
+  responseCacheKey = latest.upstream.cacheKey
 ): Record<string, string> {
-  const responseEtag = buildRulesEtag(etag, mode, name, filter);
+  const responseEtag = buildRulesEtag(responseCacheKey, mode, name, filter);
   return {
     "content-type": "text/plain; charset=utf-8",
     "cache-control": stale
       ? "public, max-age=60, s-maxage=120, stale-while-revalidate=900"
       : "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400",
     etag: responseEtag,
-    "x-upstream-etag": etag,
+    "x-upstream-etag": latest.upstream.etag,
+    "x-upstream-format": "yaml",
     "x-mode": mode,
     "x-list": name.toLowerCase(),
     ...(filter ? { "x-filter": filter } : {}),
@@ -870,14 +876,14 @@ async function ensureArtifactForLatest(
   name: string,
   filter: string | null
 ): Promise<ArtifactBuildResult> {
-  const lockKey = `${latest.upstream.etag}:${mode}:${artifactName(name, filter)}`;
+  const lockKey = `${latest.upstream.cacheKey}:${mode}:${artifactName(name, filter)}`;
   const existingLock = artifactBuildLocks.get(lockKey);
   if (existingLock) {
     return existingLock;
   }
 
   const lock = (async () => {
-    const outputKey = artifactKey(latest.upstream.etag, mode, name, filter);
+    const outputKey = artifactKey(latest.upstream.cacheKey, mode, name, filter);
     const existing = await readText(env.GEOSITE_BUCKET, outputKey);
     if (existing !== null) {
       return {
@@ -937,7 +943,7 @@ async function ensureArtifactForLatest(
 }
 
 async function loadResolvedLists(env: WorkerEnv, latest: LatestState): Promise<Record<string, ResolvedList>> {
-  const cacheKey = latest.upstream.etag;
+  const cacheKey = latest.upstream.cacheKey;
   const cached = resolvedCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -1020,25 +1026,77 @@ function collectFilters(entries: DomainRule[]): string[] {
   return Array.from(attrs).sort();
 }
 
-function extractSourcesFromZip(zipData: Uint8Array): Record<string, string> {
-  const files = unzipSync(zipData);
+async function checkUpstreamYamlEtag(yamlUrl: string, userAgent: string, fetchImpl: typeof fetch): Promise<string | null> {
+  const response = await fetchImpl(yamlUrl, {
+    method: "HEAD",
+    headers: {
+      "user-agent": userAgent
+    }
+  });
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 404 || response.status === 405) {
+      return null;
+    }
+    throw new Error(`failed to check upstream yaml: ${response.status} ${response.statusText}`);
+  }
+
+  return normalizeEtag(response.headers.get("etag"));
+}
+
+function parseSourcesFromDlcPlainYaml(yamlText: string): Record<string, string> {
+  const parsed = parseYaml(yamlText) as unknown;
+  if (!isObjectRecord(parsed) || !Array.isArray(parsed.lists)) {
+    throw new Error("invalid upstream yaml: missing lists array");
+  }
+
   const sources: Record<string, string> = {};
 
-  for (const [filePath, content] of Object.entries(files)) {
-    const match = /\/data\/([^/]+)$/.exec(filePath);
-    if (!match) {
-      continue;
+  for (const item of parsed.lists) {
+    if (!isObjectRecord(item)) {
+      throw new Error("invalid upstream yaml: list entry must be an object");
     }
 
-    const listName = match[1]!.toLowerCase();
+    const list = item as unknown as DlcPlainYamlList;
+    if (typeof list.name !== "string") {
+      throw new Error("invalid upstream yaml: list name must be a string");
+    }
+
+    const listName = list.name.trim().toLowerCase();
     if (!VALID_LIST_NAME.test(listName)) {
-      continue;
+      throw new Error(`invalid upstream yaml list name: ${JSON.stringify(list.name)}`);
+    }
+    if (hasOwn(sources, listName)) {
+      throw new Error(`duplicate upstream yaml list: ${listName}`);
+    }
+    if (!Array.isArray(list.rules) || !list.rules.every((rule) => typeof rule === "string")) {
+      throw new Error(`invalid upstream yaml rules for list: ${listName}`);
+    }
+    if (list.length !== undefined && (!Number.isInteger(list.length) || list.length !== list.rules.length)) {
+      throw new Error(`invalid upstream yaml length for list: ${listName}`);
     }
 
-    sources[listName] = strFromU8(content);
+    sources[listName] = list.rules.map((rule) => normalizeDlcPlainYamlRuleToSourceLine(rule)).join("\n");
+    if (sources[listName].length > 0) {
+      sources[listName] += "\n";
+    }
   }
 
   return sources;
+}
+
+function normalizeDlcPlainYamlRuleToSourceLine(rule: string): string {
+  const match = /:(@[a-z0-9!-]+(?:,@[a-z0-9!-]+)*)$/.exec(rule);
+  if (!match) {
+    return rule;
+  }
+
+  const attrs = match[1]!.split(",").join(" ");
+  return `${rule.slice(0, match.index)} ${attrs}`;
+}
+
+function isObjectRecord(input: unknown): input is Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input);
 }
 
 function normalizeEtag(raw: string | null): string | null {
@@ -1046,6 +1104,10 @@ function normalizeEtag(raw: string | null): string | null {
     return null;
   }
   return raw.replace(/^W\//, "").replace(/^"/, "").replace(/"$/, "").trim() || null;
+}
+
+function safeCacheKey(input: string): string {
+  return input.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 async function sha256Hex(input: Uint8Array): Promise<string> {
