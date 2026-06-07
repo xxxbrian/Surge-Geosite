@@ -30,6 +30,7 @@ const snapshotCache = new Map<string, Promise<SnapshotPayload>>();
 const resolvedCache = new Map<string, Promise<Record<string, ResolvedList>>>();
 const artifactBuildLocks = new Map<string, Promise<ArtifactBuildResult>>();
 const remoteBinaryCacheLocks = new Map<string, Promise<ReadThroughRemoteBinaryResult>>();
+const geositeRefreshLocks = new WeakMap<R2BucketLike, Promise<RefreshResult>>();
 
 export interface R2ObjectBodyLike {
   text(): Promise<string>;
@@ -348,7 +349,7 @@ async function handleFetch(
   const path = url.pathname;
 
   if (path === "/geosite") {
-    return handleGeositeIndex(request, env, ctx);
+    return handleGeositeIndex(request, env, ctx, deps);
   }
 
   if (path === "/geosite-srs") {
@@ -410,7 +411,7 @@ async function handleFetch(
     nameWithFilter = decoded;
   }
 
-  return handleGeositeRules(request, mode, nameWithFilter, env, ctx);
+  return handleGeositeRules(request, mode, nameWithFilter, env, ctx, deps);
 }
 
 async function handleGeositeSrs(
@@ -509,8 +510,13 @@ async function handleGeositeMrs(
   });
 }
 
-async function handleGeositeIndex(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
-  const latest = await ensureLatestState(env);
+async function handleGeositeIndex(
+  request: Request,
+  env: WorkerEnv,
+  ctx: ExecutionContextLike,
+  deps: WorkerDeps
+): Promise<Response> {
+  const latest = await ensureLatestStateReady(env, deps);
   if (!latest) {
     return json(503, { ok: false, error: "geosite data not ready" });
   }
@@ -546,14 +552,15 @@ async function handleGeositeRules(
   mode: RegexMode,
   nameWithFilter: string,
   env: WorkerEnv,
-  ctx: ExecutionContextLike
+  ctx: ExecutionContextLike,
+  deps: WorkerDeps
 ): Promise<Response> {
   const { name, filter } = splitNameFilter(nameWithFilter);
   if (!isValidListName(name) || (filter !== null && !isValidAttr(filter))) {
     return text(400, "invalid name");
   }
 
-  const latest = await ensureLatestState(env);
+  const latest = await ensureLatestStateReady(env, deps);
   if (!latest) {
     return text(503, "geosite data not ready");
   }
@@ -988,6 +995,33 @@ async function ensureLatestState(env: WorkerEnv): Promise<LatestState | null> {
   return readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
 }
 
+async function ensureLatestStateReady(env: WorkerEnv, deps: WorkerDeps): Promise<LatestState | null> {
+  const latest = await ensureLatestState(env);
+  if (latest) {
+    return latest;
+  }
+
+  try {
+    await ensureGeositeRefresh(env, deps);
+  } catch {
+    return null;
+  }
+  return ensureLatestState(env);
+}
+
+async function ensureGeositeRefresh(env: WorkerEnv, deps: WorkerDeps): Promise<RefreshResult> {
+  const existing = geositeRefreshLocks.get(env.GEOSITE_BUCKET);
+  if (existing) {
+    return existing;
+  }
+
+  const refresh = refreshGeositeRun(env, deps).finally(() => {
+    geositeRefreshLocks.delete(env.GEOSITE_BUCKET);
+  });
+  geositeRefreshLocks.set(env.GEOSITE_BUCKET, refresh);
+  return refresh;
+}
+
 function buildIndexFromSnapshot(sources: Record<string, string>): GeositeIndex {
   const parsed = parseListsFromText(sources);
   const resolved = resolveAllLists(parsed);
@@ -1040,7 +1074,7 @@ async function checkUpstreamYamlEtag(yamlUrl: string, userAgent: string, fetchIm
 }
 
 function parseSourcesFromDlcPlainYaml(yamlText: string): Record<string, string> {
-  const parsed = parseYaml(yamlText) as unknown;
+  const parsed = parseYaml(yamlText, { schema: "failsafe" }) as unknown;
   if (!isObjectRecord(parsed) || !Array.isArray(parsed.lists)) {
     throw new Error("invalid upstream yaml: missing lists array");
   }
@@ -1067,7 +1101,8 @@ function parseSourcesFromDlcPlainYaml(yamlText: string): Record<string, string> 
     if (!Array.isArray(list.rules) || !list.rules.every((rule) => typeof rule === "string")) {
       throw new Error(`invalid upstream yaml rules for list: ${listName}`);
     }
-    if (list.length !== undefined && (!Number.isInteger(list.length) || list.length !== list.rules.length)) {
+    const declaredLength = parseYamlListLength(list.length);
+    if (declaredLength !== null && declaredLength !== list.rules.length) {
       throw new Error(`invalid upstream yaml length for list: ${listName}`);
     }
 
@@ -1078,6 +1113,19 @@ function parseSourcesFromDlcPlainYaml(yamlText: string): Record<string, string> 
   }
 
   return sources;
+}
+
+function parseYamlListLength(input: unknown): number | null {
+  if (input === undefined) {
+    return null;
+  }
+  if (typeof input === "number" && Number.isInteger(input)) {
+    return input;
+  }
+  if (typeof input === "string" && /^[0-9]+$/.test(input)) {
+    return Number.parseInt(input, 10);
+  }
+  return -1;
 }
 
 function normalizeDlcPlainYamlRuleToSourceLine(rule: string): string {

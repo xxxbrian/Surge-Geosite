@@ -357,29 +357,96 @@ describe("refreshGeositeRun", () => {
       google: ["!cn", "ads", "cn"]
     });
   });
+
+  test("preserves numeric-looking yaml list names", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    const yamlText = [
+      "lists:",
+      "  - name: 115",
+      "    length: 1",
+      "    rules:",
+      "      - \"domain:115.com\"",
+      "  - name: 0x0",
+      "    length: 1",
+      "    rules:",
+      "      - \"domain:0x0.st\"",
+      ""
+    ].join("\n");
+
+    const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      if ((init?.method ?? "GET").toUpperCase() === "HEAD") {
+        return new Response(null, {
+          status: 200,
+          headers: { etag: '"etag-numeric-names-v1"' }
+        });
+      }
+      return new Response(yamlText, {
+        status: 200,
+        headers: { etag: '"etag-numeric-names-v1"' }
+      });
+    };
+
+    await refreshGeositeRun(env, {
+      now: () => Date.parse("2026-02-15T03:00:00.000Z"),
+      fetchImpl
+    });
+
+    const indexRaw = await bucket.get("snapshots/etag-numeric-names-v1/index/geosite.json");
+    expect(indexRaw).not.toBeNull();
+    expect(JSON.parse(await indexRaw!.text())).toEqual({
+      "0x0": [],
+      "115": []
+    });
+  });
 });
 
 describe("worker fetch routes", () => {
-  test("returns 503 when latest state is missing and does not hit upstream", async () => {
+  test("initializes geosite data from upstream when latest state is missing", async () => {
     const bucket = new MemoryR2Bucket();
-    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    const yamlText = makeDlcYaml({
+      google: ["domain:google.com"]
+    });
     const calls: string[] = [];
     const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      calls.push((init?.method ?? "GET").toUpperCase());
-      return new Response(null, { status: 500 });
+      const method = (init?.method ?? "GET").toUpperCase();
+      calls.push(method);
+      if (method === "HEAD") {
+        return new Response(null, {
+          status: 200,
+          headers: { etag: '"etag-lazy-init-v1"' }
+        });
+      }
+      return new Response(yamlText, {
+        status: 200,
+        headers: { etag: '"etag-lazy-init-v1"' }
+      });
     };
+
+    const worker = createWorker({ fetchImpl });
+    const indexResponse = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
+    expect(indexResponse.status).toBe(200);
+    expect(indexResponse.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await indexResponse.json()).toEqual({ google: [] });
+
+    const rulesResponse = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
+    expect(rulesResponse.status).toBe(200);
+    expect(rulesResponse.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await rulesResponse.text()).toContain("DOMAIN-SUFFIX,google.com");
+    expect(calls).toEqual(["HEAD", "GET"]);
+  });
+
+  test("returns 503 when latest state is missing and upstream refresh fails", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    const fetchImpl: typeof fetch = async (): Promise<Response> => new Response(null, { status: 500 });
 
     const worker = createWorker({ fetchImpl });
     const indexResponse = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
     expect(indexResponse.status).toBe(503);
     expect(indexResponse.headers.get("x-robots-tag")).toBe("noindex");
     expect(await indexResponse.json()).toEqual({ ok: false, error: "geosite data not ready" });
-
-    const rulesResponse = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
-    expect(rulesResponse.status).toBe(503);
-    expect(rulesResponse.headers.get("x-robots-tag")).toBe("noindex");
-    expect(await rulesResponse.text()).toBe("geosite data not ready");
-    expect(calls).toEqual([]);
   });
 
   test("compiles and serves artifact on first request", async () => {
