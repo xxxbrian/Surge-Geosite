@@ -1,4 +1,3 @@
-import { gzipSync, strToU8 } from "fflate";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -67,6 +66,7 @@ class TestContext implements ExecutionContextLike {
 }
 
 const DEFAULT_YAML_URL = "https://example.com/dlc.dat_plain.yml";
+const textEncoder = new TextEncoder();
 
 function makeLatestState(
   cacheKey: string,
@@ -79,7 +79,7 @@ function makeLatestState(
       cacheKey
     },
     snapshot: {
-      sourceKey: `snapshots/${cacheKey}/sources.json.gz`,
+      sourceKey: `snapshots/${cacheKey}/sources.json`,
       indexKey: `snapshots/${cacheKey}/index/geosite.json`,
       listCount: options.listCount ?? 1,
       generatedAt: "2026-02-15T00:00:00.000Z"
@@ -89,19 +89,19 @@ function makeLatestState(
   };
 }
 
-function makeSnapshotPayload(cacheKey: string, lists: Record<string, string>): Uint8Array {
-  return gzipSync(
-    strToU8(
-      JSON.stringify({
-        version: 2,
-        etag: cacheKey,
-        yamlUrl: DEFAULT_YAML_URL,
-        cacheKey,
-        generatedAt: "2026-02-15T00:00:00.000Z",
-        lists
-      })
-    )
-  );
+function makeSnapshotPayload(cacheKey: string, lists: Record<string, string>): string {
+  return `${JSON.stringify({
+    version: 2,
+    etag: cacheKey,
+    yamlUrl: DEFAULT_YAML_URL,
+    cacheKey,
+    generatedAt: "2026-02-15T00:00:00.000Z",
+    lists
+  })}\n`;
+}
+
+function strToU8(input: string): Uint8Array {
+  return textEncoder.encode(input);
 }
 
 function makeDlcYaml(lists: Record<string, string[]>): string {
@@ -287,7 +287,7 @@ describe("refreshGeositeRun", () => {
     expect(latestRaw).not.toBeNull();
     const latest = JSON.parse(await latestRaw!.text()) as { upstream: { etag: string } };
     expect(latest.upstream.etag).toBe("etag-stable-v1");
-    expect(await bucket.get("snapshots/etag-bad-v2/sources.json.gz")).toBeNull();
+    expect(await bucket.get("snapshots/etag-bad-v2/sources.json")).toBeNull();
   });
 
   test("falls back to GET when upstream HEAD has no usable etag", async () => {
@@ -393,7 +393,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-fetch-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-fetch-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-fetch-v1/sources.json",
         indexKey: "snapshots/etag-fetch-v1/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -403,7 +403,7 @@ describe("worker fetch routes", () => {
     });
 
     await bucket.put(
-      "snapshots/etag-fetch-v1/sources.json.gz",
+      "snapshots/etag-fetch-v1/sources.json",
       makeSnapshotPayload("etag-fetch-v1", {
         google: "domain:google.com\nfull:mail.google.com\n"
       })
@@ -439,7 +439,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-index-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-index-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-index-v1/sources.json",
         indexKey: "snapshots/etag-index-v1/index/geosite.json",
         listCount: 2,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -484,7 +484,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-head-index-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-head-index-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-head-index-v1/sources.json",
         indexKey: "snapshots/etag-head-index-v1/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -534,7 +534,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-stale-v2"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-stale-v2/sources.json.gz",
+        sourceKey: "snapshots/etag-stale-v2/sources.json",
         indexKey: "snapshots/etag-stale-v2/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -544,7 +544,7 @@ describe("worker fetch routes", () => {
     });
 
     await bucket.put(
-      "snapshots/etag-stale-v2/sources.json.gz",
+      "snapshots/etag-stale-v2/sources.json",
       makeSnapshotPayload("etag-stale-v2", {
         google: "domain:google.com\nfull:mail.google.com\n"
       })
@@ -581,7 +581,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-del-v2"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-del-v2/sources.json.gz",
+        sourceKey: "snapshots/etag-del-v2/sources.json",
         indexKey: "snapshots/etag-del-v2/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -591,7 +591,7 @@ describe("worker fetch routes", () => {
     });
 
     await bucket.put(
-      "snapshots/etag-del-v2/sources.json.gz",
+      "snapshots/etag-del-v2/sources.json",
       makeSnapshotPayload("etag-del-v2", {
         github: "domain:github.com\n"
       })
@@ -618,7 +618,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-noindex-v2"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-noindex-v2/sources.json.gz",
+        sourceKey: "snapshots/etag-noindex-v2/sources.json",
         indexKey: "snapshots/etag-noindex-v2/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -628,7 +628,7 @@ describe("worker fetch routes", () => {
     });
 
     await bucket.put(
-      "snapshots/etag-noindex-v2/sources.json.gz",
+      "snapshots/etag-noindex-v2/sources.json",
       makeSnapshotPayload("etag-noindex-v2", {
         github: "domain:github.com\n"
       })
@@ -653,7 +653,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-index-missing-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-index-missing-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-index-missing-v1/sources.json",
         indexKey: "snapshots/etag-index-missing-v1/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -662,7 +662,7 @@ describe("worker fetch routes", () => {
       checkedAt: "2026-02-15T00:00:00.000Z"
     });
     await bucket.put(
-      "snapshots/etag-index-missing-v1/sources.json.gz",
+      "snapshots/etag-index-missing-v1/sources.json",
       makeSnapshotPayload("etag-index-missing-v1", {
         apple: "domain:apple.com @cn\nfull:icloud.com @us\n"
       })
@@ -695,7 +695,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-filter-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-filter-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-filter-v1/sources.json",
         indexKey: "snapshots/etag-filter-v1/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -705,7 +705,7 @@ describe("worker fetch routes", () => {
     });
 
     await bucket.put(
-      "snapshots/etag-filter-v1/sources.json.gz",
+      "snapshots/etag-filter-v1/sources.json",
       makeSnapshotPayload("etag-filter-v1", {
         google: "domain:google.com @cn\n"
       })
@@ -746,7 +746,7 @@ describe("worker fetch routes", () => {
         cacheKey: "etag-poison-v1"
       },
       snapshot: {
-        sourceKey: "snapshots/etag-poison-v1/sources.json.gz",
+        sourceKey: "snapshots/etag-poison-v1/sources.json",
         indexKey: "snapshots/etag-poison-v1/index/geosite.json",
         listCount: 1,
         generatedAt: "2026-02-15T00:00:00.000Z"
@@ -754,13 +754,13 @@ describe("worker fetch routes", () => {
       previousCacheKey: null,
       checkedAt: "2026-02-15T00:00:00.000Z"
     });
-    await bucket.put("snapshots/etag-poison-v1/sources.json.gz", strToU8("not-gzip"));
+    await bucket.put("snapshots/etag-poison-v1/sources.json", strToU8("not-gzip"));
 
     const worker = createWorker();
     await expect(worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext())).rejects.toThrow();
 
     await bucket.put(
-      "snapshots/etag-poison-v1/sources.json.gz",
+      "snapshots/etag-poison-v1/sources.json",
       makeSnapshotPayload("etag-poison-v1", {
         google: "domain:google.com\n"
       })

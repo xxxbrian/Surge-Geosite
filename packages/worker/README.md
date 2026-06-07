@@ -26,7 +26,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 ## R2 Layout
 
 - `state/latest.json`
-- `snapshots/{cacheKey}/sources.json.gz`
+- `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
 - `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
 

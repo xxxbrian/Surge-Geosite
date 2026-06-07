@@ -59,7 +59,7 @@ Recommended route priority:
 ## R2 Storage Layout
 
 - `state/latest.json`
-- `snapshots/{cacheKey}/sources.json.gz`
+- `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
 - `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
 

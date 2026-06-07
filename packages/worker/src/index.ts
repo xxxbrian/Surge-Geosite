@@ -6,7 +6,6 @@ import {
   type RegexMode,
   type ResolvedList
 } from "@surge-geosite/core";
-import { gunzipSync, gzipSync, strFromU8, strToU8 } from "fflate";
 import { parse as parseYaml } from "yaml";
 
 const DEFAULT_UPSTREAM_YAML_URL =
@@ -265,7 +264,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
     };
   }
 
-  const sources = parseSourcesFromDlcPlainYaml(strFromU8(yamlBytes));
+  const sources = parseSourcesFromDlcPlainYaml(new TextDecoder().decode(yamlBytes));
   const listCount = Object.keys(sources).length;
   if (listCount === 0) {
     throw new Error("no geosite data found in upstream yaml");
@@ -287,11 +286,9 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
     lists: sources
   };
 
-  const compressedSnapshot = gzipSync(strToU8(JSON.stringify(snapshotPayload)));
   const index = buildIndexFromSources(sources, resolved);
 
-  await writeBinary(env.GEOSITE_BUCKET, sourceKey, compressedSnapshot, {
-    contentType: "application/json",
+  await writeJson(env.GEOSITE_BUCKET, sourceKey, snapshotPayload, {
     cacheControl: "public, max-age=31536000, immutable"
   });
   await writeJson(env.GEOSITE_BUCKET, indexKey, index);
@@ -971,14 +968,12 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
   }
 
   const pending = (async () => {
-    const object = await env.GEOSITE_BUCKET.get(latest.snapshot.sourceKey);
-    if (!object) {
+    const payload = await readJson<SnapshotPayload>(env.GEOSITE_BUCKET, latest.snapshot.sourceKey);
+    if (!payload) {
       throw new Error(`snapshot not found: ${latest.snapshot.sourceKey}`);
     }
 
-    const compressed = new Uint8Array(await object.arrayBuffer());
-    const payloadText = strFromU8(gunzipSync(compressed));
-    return JSON.parse(payloadText) as SnapshotPayload;
+    return payload;
   })();
 
   snapshotCache.set(cacheKey, pending);
@@ -1127,7 +1122,7 @@ function artifactKey(etag: string, mode: RegexMode, name: string, filter: string
 }
 
 function snapshotSourceKey(etag: string): string {
-  return `snapshots/${etag}/sources.json.gz`;
+  return `snapshots/${etag}/sources.json`;
 }
 
 function snapshotIndexKey(etag: string): string {
@@ -1289,11 +1284,21 @@ async function writeText(
   });
 }
 
-async function writeJson(bucket: R2BucketLike, key: string, value: unknown): Promise<void> {
+async function writeJson(
+  bucket: R2BucketLike,
+  key: string,
+  value: unknown,
+  options: { cacheControl?: string } = {}
+): Promise<void> {
+  const metadata: NonNullable<R2PutOptionsLike["httpMetadata"]> = {
+    contentType: "application/json; charset=utf-8"
+  };
+  if (options.cacheControl) {
+    metadata.cacheControl = options.cacheControl;
+  }
+
   await bucket.put(key, `${JSON.stringify(value)}\n`, {
-    httpMetadata: {
-      contentType: "application/json; charset=utf-8"
-    }
+    httpMetadata: metadata
   });
 }
 
