@@ -4,6 +4,12 @@ const EXACT_DOMAIN_PATTERN = /^\^([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
 const SUFFIX_DOMAIN_PATTERN = /^\(\^\|\\\.\)([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
 const REPEATED_SUBDOMAIN_PATTERN = /^\^\(\.\+\\\.\)\*([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
 const ADVANCED_TOKENS_PATTERN = /\(\?<?[=!]|\\[1-9]/;
+const MIN_WILDCARD_LITERAL_CHARS = 3;
+
+interface WildcardCandidate {
+  value: string | null;
+  safety: "safe" | "low-information" | "unsafe" | "none";
+}
 
 export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTranspileResult {
   const exact = pattern.match(EXACT_DOMAIN_PATTERN);
@@ -90,16 +96,27 @@ export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTr
   }
 
   const wildcard = wildcardFromRegex(pattern);
-  if (wildcard) {
+  if (wildcard.value && (wildcard.safety === "safe" || mode === "full")) {
     return {
       status: "widened",
       rules: [
         {
           type: "DOMAIN-WILDCARD",
-          value: wildcard
+          value: wildcard.value
         }
       ],
-      reason: "Regex converted to heuristic DOMAIN-WILDCARD pattern."
+      reason:
+        wildcard.safety === "low-information"
+          ? "Low-information regex converted to heuristic DOMAIN-WILDCARD pattern in full mode."
+          : "Regex converted to heuristic DOMAIN-WILDCARD pattern."
+    };
+  }
+
+  if (wildcard.safety === "low-information" || wildcard.safety === "unsafe") {
+    return {
+      status: "unsupported",
+      rules: [],
+      reason: "Heuristic wildcard conversion would overmatch public suffixes."
     };
   }
 
@@ -137,7 +154,7 @@ export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTr
   };
 }
 
-function wildcardFromRegex(pattern: string): string | null {
+function wildcardFromRegex(pattern: string): WildcardCandidate {
   let out = "";
 
   for (let index = 0; index < pattern.length; index += 1) {
@@ -187,7 +204,7 @@ function wildcardFromRegex(pattern: string): string | null {
     if (char === "[") {
       const close = findCharClassEnd(pattern, index + 1);
       if (close === -1) {
-        return null;
+        return { value: null, safety: "none" };
       }
 
       index = consumeQuantifier(pattern, close);
@@ -198,7 +215,7 @@ function wildcardFromRegex(pattern: string): string | null {
     if (char === "(") {
       const close = findGroupEnd(pattern, index + 1);
       if (close === -1) {
-        return null;
+        return { value: null, safety: "none" };
       }
 
       index = consumeQuantifier(pattern, close);
@@ -209,7 +226,7 @@ function wildcardFromRegex(pattern: string): string | null {
     if (char === "{") {
       const close = pattern.indexOf("}", index + 1);
       if (close === -1) {
-        return null;
+        return { value: null, safety: "none" };
       }
       index = close;
       out += "*";
@@ -230,11 +247,42 @@ function wildcardFromRegex(pattern: string): string | null {
   }
 
   out = normalizeWildcard(out);
-  if (out.length === 0 || !/[a-z0-9]/i.test(out) || !out.includes(".")) {
-    return null;
+  return {
+    value: isHeuristicWildcardCandidate(out) ? out.toLowerCase() : null,
+    safety: getHeuristicWildcardSafety(out)
+  };
+}
+
+function getHeuristicWildcardSafety(value: string): WildcardCandidate["safety"] {
+  if (value.length === 0 || !/[a-z0-9]/i.test(value) || !value.includes(".")) {
+    return "none";
   }
 
-  return out.toLowerCase();
+  const labels = value.split(".");
+  if (labels.length < 2 || labels.some((label) => label.length === 0)) {
+    return "none";
+  }
+
+  const domainLabels = labels[0] === "*" ? labels.slice(1) : labels;
+  if (domainLabels.length < 2) {
+    return "unsafe";
+  }
+
+  const registrableLabel = domainLabels[domainLabels.length - 2];
+  if (!registrableLabel || registrableLabel === "*" || !/[a-z0-9]/i.test(registrableLabel)) {
+    return "unsafe";
+  }
+
+  const literalChars = domainLabels
+    .slice(0, -1)
+    .join("")
+    .replace(/\*/g, "").length;
+  return literalChars >= MIN_WILDCARD_LITERAL_CHARS ? "safe" : "low-information";
+}
+
+function isHeuristicWildcardCandidate(value: string): boolean {
+  const safety = getHeuristicWildcardSafety(value);
+  return safety === "safe" || safety === "low-information";
 }
 
 function normalizeWildcard(value: string): string {

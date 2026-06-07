@@ -40,6 +40,34 @@ describe("transpileRegexToSurge", () => {
       reason: "Regex downgraded to match-all wildcard in full mode."
     });
   });
+
+  test("rejects wildcard downgrades without a registrable domain anchor in balanced mode", () => {
+    expect(transpileRegexToSurge("(^|\\.)[a-z][1-9][0-9][a-z]\\.com$", "balanced")).toEqual({
+      status: "unsupported",
+      rules: [],
+      reason: "Heuristic wildcard conversion would overmatch public suffixes."
+    });
+
+    expect(transpileRegexToSurge("(^|\\.)91porn\\.(best|com|cool|fun|group|party|plus|site|tw|work)$", "balanced")).toEqual({
+      status: "widened",
+      rules: [{ type: "DOMAIN-WILDCARD", value: "*.91porn.*" }],
+      reason: "Regex converted to heuristic DOMAIN-WILDCARD pattern."
+    });
+  });
+
+  test("allows low-information wildcard downgrades only in full mode", () => {
+    expect(transpileRegexToSurge("(^|\\.)hs[1-9]{2}\\.vip$", "balanced")).toEqual({
+      status: "unsupported",
+      rules: [],
+      reason: "Heuristic wildcard conversion would overmatch public suffixes."
+    });
+
+    expect(transpileRegexToSurge("(^|\\.)hs[1-9]{2}\\.vip$", "full")).toEqual({
+      status: "widened",
+      rules: [{ type: "DOMAIN-WILDCARD", value: "*.hs*.vip" }],
+      reason: "Low-information regex converted to heuristic DOMAIN-WILDCARD pattern in full mode."
+    });
+  });
 });
 
 describe("emitSurgeRuleset", () => {
@@ -84,5 +112,31 @@ describe("emitSurgeRuleset", () => {
         onUnsupportedRegex: "error"
       })
     ).toThrow(SurgeEmitError);
+  });
+
+  test("drops overbroad wildcard output in every mode", () => {
+    const parsed = parseListsFromText({
+      demo: [
+        "regexp:^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$",
+        "regexp:(^|\\.)[a-z][1-9][0-9][a-z]\\.com$",
+        "regexp:(^|\\.)91porn\\.(best|com|cool|fun)$"
+      ].join("\n")
+    });
+
+    const resolved = resolveOneList(parsed, "demo");
+    const balanced = emitSurgeRuleset(resolved, { regexMode: "balanced" });
+    const full = emitSurgeRuleset(resolved, { regexMode: "full" });
+
+    expect(balanced.lines).toEqual(["DOMAIN-WILDCARD,*.91porn.*"]);
+    expect(full.lines).toEqual(["DOMAIN-WILDCARD,*.91porn.*"]);
+    expect(full.report.regex).toEqual({
+      total: 3,
+      lossless: 0,
+      widened: 1,
+      unsupported: 2
+    });
+    expect(full.report.unsupported.map((issue) => issue.reason)).toContain(
+      "Generated wildcard rule is too broad to emit safely."
+    );
   });
 });

@@ -13,6 +13,7 @@ import type {
 } from "./types.js";
 
 const DEFAULT_REGEX_MODE: RegexMode = "balanced";
+const OVERBROAD_WILDCARD_REASON = "Generated wildcard rule is too broad to emit safely.";
 
 export function emitSurgeRuleset(list: ResolvedList, options: EmitSurgeOptions = {}): EmitSurgeResult {
   const regexMode = options.regexMode ?? DEFAULT_REGEX_MODE;
@@ -86,6 +87,20 @@ function handleRegexRule(
     return;
   }
 
+  if (result.rules.some(isOverbroadRule)) {
+    report.regex.unsupported += 1;
+    const issue = makeIssue(entry, regexMode, OVERBROAD_WILDCARD_REASON);
+
+    report.unsupported.push(issue);
+    if (onUnsupportedRegex === "error") {
+      throw new SurgeEmitError(
+        `unsupported regex in ${listName} at line ${entry.source.line}: ${entry.value} (${issue.reason})`
+      );
+    }
+
+    return;
+  }
+
   if (result.status === "widened") {
     report.regex.widened += 1;
     report.widened.push(makeIssue(entry, regexMode, result.reason ?? "Regex widened during conversion."));
@@ -100,6 +115,22 @@ function handleRegexRule(
       source: entry.source
     });
   }
+}
+
+function isOverbroadRule(rule: Pick<SurgeRule, "type" | "value">): boolean {
+  if (rule.type !== "DOMAIN-WILDCARD") {
+    return false;
+  }
+
+  if (rule.value === "*") {
+    return true;
+  }
+
+  if (!rule.value.startsWith("*.")) {
+    return false;
+  }
+
+  return !rule.value.slice(2).includes(".");
 }
 
 function makeIssue(entry: DomainRule, mode: RegexMode, reason: string): RegexIssue {
