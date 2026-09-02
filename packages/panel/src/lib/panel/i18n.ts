@@ -46,7 +46,15 @@ const messages = {
 		filterSwitchLoading: '标签已切换，正在加载…',
 		filterInputLoading: '手动标签已更新，正在加载…',
 		selectDataset: '请选择一个数据集。',
-		github: 'GitHub'
+		github: 'GitHub',
+		ipRoutingCheck: 'IP 分流检测',
+		ipTools: 'IP 工具',
+		localIp: '本机 IP',
+		splitTunnel: '网站分流',
+		multiEgress: '多出口扫描',
+		cdnNode: 'CDN 命中节点',
+		dnsExit: 'DNS 出口',
+		webrtcUdp: 'WebRTC 出口'
 	},
 	en: {
 		appTitle: 'Surge Geosite',
@@ -93,7 +101,15 @@ const messages = {
 		filterSwitchLoading: 'Filter changed, loading...',
 		filterInputLoading: 'Manual filter updated, loading...',
 		selectDataset: 'Please select a dataset.',
-		github: 'GitHub'
+		github: 'GitHub',
+		ipRoutingCheck: 'IP Routing Check',
+		ipTools: 'IP TOOLS',
+		localIp: 'Local IP',
+		splitTunnel: 'Split Routing',
+		multiEgress: 'Multi-egress Scan',
+		cdnNode: 'CDN Edge Nodes',
+		dnsExit: 'DNS Egress',
+		webrtcUdp: 'WebRTC Egress'
 	}
 } as const;
 
