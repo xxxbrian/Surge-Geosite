@@ -20,3 +20,5 @@ Development/debug helper for generating geosite artifacts locally.
 `balanced` is the default serving mode.
 
 `index/geosite.json` is a compact `{ [listName]: filters[] }` index.
+
+Each build, including `--list`, replaces the generated dataset set and removes previously generated lists omitted from this build. Use separate output directories for independent subsets.
