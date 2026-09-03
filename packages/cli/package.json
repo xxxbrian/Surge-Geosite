@@ -11,7 +11,7 @@
   "scripts": {
     "build": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json",
     "typecheck": "pnpm --filter @surge-geosite/core build && tsc -p tsconfig.json --noEmit",
-    "test": "pnpm --filter @surge-geosite/core build && vitest run"
+    "test": "pnpm run build && vitest run"
   },
   "dependencies": {
     "@surge-geosite/core": "workspace:*"
