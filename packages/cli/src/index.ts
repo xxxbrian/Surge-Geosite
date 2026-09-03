@@ -60,7 +60,7 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
   const resolved = resolveAllLists(parsed);
 
   const requestedNames = listArg
-    ? splitListArg(listArg).map((name) => name.toUpperCase())
+    ? [...new Set(splitListArg(listArg).map((name) => name.toUpperCase()))]
     : Object.keys(resolved).sort();
 
   for (const listName of requestedNames) {

@@ -58,3 +58,19 @@ test("rebuild removes obsolete manifest artifacts and preserves unrelated files"
     await rm(root, { recursive: true, force: true });
   }
 });
+
+
+test("counts each normalized dataset only once", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "geosite-duplicates-"));
+  try {
+    const dataDir = path.join(root, "data");
+    const outDir = path.join(root, "out");
+    await mkdir(dataDir);
+    await writeFile(path.join(dataDir, "alpha"), "example.com\n");
+    expect(await runCli(["build", "--data-dir", dataDir, "--out-dir", outDir, "--list", "alpha,ALPHA,alpha"])).toBe(0);
+    expect(JSON.parse(await readFile(path.join(outDir, "meta.json"), "utf8")).lists).toBe(1);
+    expect(JSON.parse(await readFile(path.join(outDir, "stats/global.json"), "utf8")).lists).toBe(1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
