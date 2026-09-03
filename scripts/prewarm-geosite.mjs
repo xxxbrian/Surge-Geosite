@@ -92,17 +92,17 @@ async function fetchWithRetry(url, options) {
         },
         signal: controller.signal
       });
-      clearTimeout(timer);
+      const body = await response.text();
 
       if (response.status >= 500 || response.status === 429) {
-        const body = await response.text();
         lastError = new Error(`HTTP ${response.status}: ${body.slice(0, 240)}`);
       } else {
-        return response;
+        return { response, body };
       }
     } catch (error) {
-      clearTimeout(timer);
       lastError = error;
+    } finally {
+      clearTimeout(timer);
     }
 
     if (attempt < options.retries) {
@@ -191,8 +191,7 @@ async function main() {
       await mkdir(path.dirname(errorPath), { recursive: true });
 
       try {
-        const response = await fetchWithRetry(requestUrl, { retries, timeoutMs });
-        const body = await response.text();
+        const { response, body } = await fetchWithRetry(requestUrl, { retries, timeoutMs });
         const durationMs = Date.now() - started;
         const status = response.status;
         const result = {
