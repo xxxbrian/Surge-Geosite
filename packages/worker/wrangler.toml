@@ -9,6 +9,10 @@ routes = [
   { pattern = "surge.bojin.co/geosite*", zone_name = "bojin.co" }
 ]
 
+[build]
+command = "pnpm --filter @surge-geosite/core build"
+watch_dir = ["src", "../core/src"]
+
 [observability]
 enabled = true
 
