@@ -74,3 +74,10 @@ test("counts each normalized dataset only once", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+
+test.each([
+  ["--list"], ["--list=,,,"], ["--list="], ["--out-dir"], ["--out-dir="], ["--data-dir"]
+])("rejects missing or empty build option %j before accessing inputs", async (...args) => {
+  expect(await runCli(["build", "--data-dir", "/missing/should-not-be-read", ...args])).toBe(1);
+});

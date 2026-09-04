@@ -46,6 +46,16 @@ export async function runCli(argv: string[]): Promise<number> {
 }
 
 async function runBuild(flags: Record<string, string | boolean>): Promise<number> {
+  for (const key of ["data-dir", "out-dir", "list"]) {
+    if (Object.hasOwn(flags, key) && (typeof flags[key] !== "string" || !(flags[key] as string).trim())) {
+      console.error(`missing value for --${key}`);
+      return 1;
+    }
+  }
+  if (typeof flags.list === "string" && splitListArg(flags.list).length === 0) {
+    console.error("--list must contain at least one dataset");
+    return 1;
+  }
   const dataDir = getStringFlag(flags, "data-dir");
   const outDir = path.resolve(process.cwd(), getStringFlag(flags, "out-dir") ?? "out");
   const listArg = getStringFlag(flags, "list");
