@@ -52,7 +52,8 @@ function validateRules(content) {
   const suspiciousWildcards = [];
 
   for (const line of lines) {
-    const isAllowed = DEFAULT_PREFIXES.some((prefix) => line.startsWith(prefix));
+    const isAllowed = DEFAULT_PREFIXES.some((prefix) => line.startsWith(prefix))
+      && /^(?:DOMAIN|DOMAIN-SUFFIX|DOMAIN-KEYWORD|DOMAIN-WILDCARD),[^,\s]+$/.test(line);
     if (!isAllowed) {
       invalidLines.push(line);
       continue;

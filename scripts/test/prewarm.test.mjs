@@ -61,6 +61,8 @@ test("prewarm retries a stalled error body and consumes the successful retry", a
 for (const [name, status, body] of [
   ["HTTP errors", 404, "missing"],
   ["HTML masquerading as a ruleset", 200, "<html>error</html>"],
+  ["empty rule values", 200, "DOMAIN,\n"],
+  ["unexpected rule columns", 200, "DOMAIN,example.com,DIRECT\n"],
   ["match-all wildcards", 200, "DOMAIN-WILDCARD,*\n"]
 ]) {
   test(`prewarm fails for ${name} without writing a ruleset`, async () => {
