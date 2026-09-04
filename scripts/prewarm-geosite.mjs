@@ -207,8 +207,9 @@ async function main() {
 
         summary.counts.byStatus[String(status)] = (summary.counts.byStatus[String(status)] ?? 0) + 1;
 
-        if (status === 200) {
-          const validation = validateRules(body);
+        const validation = status === 200 ? validateRules(body) : null;
+        const valid = validation && validation.invalidLineCount === 0 && validation.suspiciousWildcardCount === 0;
+        if (valid) {
           await writeFile(outputPath, body, "utf8");
 
           summary.jobs.push({
@@ -231,6 +232,7 @@ async function main() {
           summary.jobs.push({
             ...result,
             file: errorPath,
+            ...validation,
             errorBodyPreview: body.slice(0, 300)
           });
           summary.counts.failed += 1;
@@ -309,6 +311,8 @@ async function main() {
   await writeFile(path.join(outDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf8");
   await writeFile(path.join(outDir, "largest.json"), `${JSON.stringify(largest, null, 2)}\n`, "utf8");
   await writeFile(path.join(outDir, "anomalies.json"), `${JSON.stringify(anomalies, null, 2)}\n`, "utf8");
+
+  if (summary.counts.failed > 0) process.exitCode = 1;
 
   process.stdout.write(`done: ${summary.counts.ok} ok, ${summary.counts.failed} failed\n`);
   process.stdout.write(`summary: ${path.join(outDir, "summary.json")}\n`);

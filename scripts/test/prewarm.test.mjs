@@ -40,7 +40,8 @@ async function runPrewarm(handler, extra = []) {
 }
 
 test("prewarm timeout includes a stalled success response body", async () => {
-  const { summary } = await runPrewarm((_req, res) => { res.writeHead(200); res.flushHeaders(); res.write("DOMAIN,"); });
+  const { code, summary } = await runPrewarm((_req, res) => { res.writeHead(200); res.flushHeaders(); res.write("DOMAIN,"); });
+  assert.equal(code, 1);
   assert.equal(summary.counts.failed, 1);
   assert.equal(summary.counts.ok, 0);
 });
@@ -55,4 +56,25 @@ test("prewarm retries a stalled error body and consumes the successful retry", a
   assert.equal(calls, 2);
   assert.equal(summary.counts.ok, 1);
   assert.equal(rules, "DOMAIN,example.com\n");
+});
+
+for (const [name, status, body] of [
+  ["HTTP errors", 404, "missing"],
+  ["HTML masquerading as a ruleset", 200, "<html>error</html>"],
+  ["match-all wildcards", 200, "DOMAIN-WILDCARD,*\n"]
+]) {
+  test(`prewarm fails for ${name} without writing a ruleset`, async () => {
+    const { code, summary, rules } = await runPrewarm((_req, res) => { res.writeHead(status); res.end(body); });
+    assert.equal(code, 1);
+    assert.equal(summary.counts.ok, 0);
+    assert.equal(summary.counts.failed, 1);
+    assert.equal(rules, null);
+  });
+}
+
+test("prewarm accepts an empty ruleset", async () => {
+  const { code, summary, rules } = await runPrewarm((_req, res) => res.end(""));
+  assert.equal(code, 0);
+  assert.equal(summary.counts.ok, 1);
+  assert.equal(rules, "");
 });
