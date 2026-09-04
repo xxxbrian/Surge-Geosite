@@ -20,22 +20,26 @@ function getArg(name, fallback) {
 
   const idx = process.argv.indexOf(name);
   if (idx !== -1) {
-    return process.argv[idx + 1] ?? fallback;
+    const value = process.argv[idx + 1];
+    if (value === undefined || value.startsWith("--")) throw new Error(`missing value for ${name}`);
+    return value;
   }
 
   return fallback;
 }
 
-function asInt(value, fallback) {
-  if (value === undefined || value === null || value === "") {
-    return fallback;
+function integerArg(name, fallback, min, max) {
+  const value = Number(getArg(name, String(fallback)));
+  if (!Number.isSafeInteger(value) || value < min || value > max) {
+    throw new Error(`${name} must be an integer between ${min} and ${max}`);
   }
-  const n = Number.parseInt(String(value), 10);
-  return Number.isFinite(n) ? n : fallback;
+  return value;
 }
 
 function sanitizeBaseUrl(input) {
-  return input.endsWith("/") ? input.slice(0, -1) : input;
+  const url = new URL(input);
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("--base-url must use HTTP or HTTPS");
+  return input.replace(/\/+$/, "");
 }
 
 function linesOf(text) {
@@ -120,15 +124,18 @@ async function main() {
   );
   const dataDir = path.resolve(getArg("--data-dir", "./domain-list-community/data"));
   const outDir = path.resolve(getArg("--out-dir", "./out-remote"));
-  const concurrency = Math.max(1, asInt(getArg("--concurrency", "8"), 8));
-  const retries = Math.max(0, asInt(getArg("--retries", "2"), 2));
-  const timeoutMs = Math.max(1000, asInt(getArg("--timeout-ms", "30000"), 30000));
-  const limit = Math.max(0, asInt(getArg("--limit", "0"), 0));
+  const concurrency = integerArg("--concurrency", 8, 1, 64);
+  const retries = integerArg("--retries", 2, 0, 10);
+  const timeoutMs = integerArg("--timeout-ms", 30000, 1000, 300000);
+  const limit = integerArg("--limit", 0, 0, Number.MAX_SAFE_INTEGER);
   const modeArg = getArg("--modes", DEFAULT_MODES.join(","));
-  const modes = modeArg
+  const modes = [...new Set(modeArg
     .split(",")
     .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+    .filter((item) => item.length > 0))];
+  if (modes.length === 0 || modes.some((mode) => !DEFAULT_MODES.includes(mode))) {
+    throw new Error("--modes must contain strict, balanced, or full");
+  }
 
   const startedAt = new Date().toISOString();
   const datasetsAll = await listDatasets(dataDir);

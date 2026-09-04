@@ -78,3 +78,9 @@ test("prewarm accepts an empty ruleset", async () => {
   assert.equal(summary.counts.ok, 1);
   assert.equal(rules, "");
 });
+
+for (const args of [["--modes=../invalid"], ["--modes=,,,"], ["--retries=abc"], ["--concurrency=0"], ["--limit"]]) {
+  test(`prewarm rejects invalid options ${args.join(" ")}`, async () => {
+    await assert.rejects(exec(process.execPath, [script, ...args]), (error) => error.code === 1);
+  });
+}
