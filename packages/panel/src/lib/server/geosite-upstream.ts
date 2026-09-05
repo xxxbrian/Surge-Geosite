@@ -41,6 +41,29 @@ export async function fetchGeositeUpstream({
 
 	const internalUrl = `https://geosite.internal${url.pathname}${url.search}`;
 	return serviceBinding.fetch(internalUrl, {
+		method: request.method,
+		headers
+	});
+}
+
+/** Preserve upstream cache semantics without buffering the rules payload. */
+export async function proxyGeositeRequest(
+	args: Parameters<typeof fetchGeositeUpstream>[0]
+): Promise<Response> {
+	const response = await fetchGeositeUpstream(args);
+	const headers = new Headers();
+	for (const key of [
+		'content-type', 'cache-control', 'etag', 'x-upstream-etag', 'x-stale',
+		'content-disposition', 'last-modified', 'vary', 'retry-after', 'allow'
+	]) {
+		const value = response.headers.get(key);
+		if (value !== null) headers.set(key, value);
+	}
+
+	const hasNoBody = args.request.method === 'HEAD' || [204, 205, 304].includes(response.status);
+	return new Response(hasNoBody ? null : response.body, {
+		status: response.status,
+		statusText: response.statusText,
 		headers
 	});
 }

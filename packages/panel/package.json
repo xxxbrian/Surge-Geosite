@@ -8,7 +8,8 @@
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "test": "pnpm run typecheck && pnpm run build",
+    "test": "pnpm run test:unit && pnpm run typecheck && pnpm run build",
+    "test:unit": "svelte-kit sync && vitest run",
     "cf:dev": "pnpm run build && wrangler dev",
     "cf:deploy": "pnpm run build && wrangler deploy"
   },
