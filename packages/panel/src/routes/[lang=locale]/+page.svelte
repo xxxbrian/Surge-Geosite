@@ -357,7 +357,6 @@
 
 	function onFilterChange(value: string) {
 		selectedFilter = value;
-		previewText = tr('filterSwitchLoading');
 	}
 
 	function onManualFilterInput(value: string) {
@@ -366,7 +365,6 @@
 		manualDebounceTimer = setTimeout(() => {
 			debouncedManualFilter = value;
 		}, 280);
-		previewText = tr('filterInputLoading');
 	}
 
 	async function onCopyLink(key: string, href: string) {

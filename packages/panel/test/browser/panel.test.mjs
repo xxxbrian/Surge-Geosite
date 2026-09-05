@@ -55,3 +55,21 @@ test('locale navigation ignores an older rules response', { timeout: 30_000 }, a
 	assert.equal(await page.locator('pre').innerText(), 'DOMAIN-SUFFIX,example.com\n');
 	assert.match(await page.locator('body').innerText(), /mode: balanced/);
 });
+
+
+test('equivalent manual tags and overridden dropdown changes preserve the preview', { timeout: 30_000 }, async (t) => {
+	const { page, base } = await openPanel(t);
+	const manual = page.getByPlaceholder('例如 cn');
+	await manual.fill('cn');
+	await page.waitForFunction(() => document.querySelector('pre')?.textContent === 'DOMAIN-SUFFIX,cn.example.com\n');
+	const before = await page.request.get(`${base}/__test/stats`).then((response) => response.json());
+	for (const value of ['CN', ' cn ']) {
+		await manual.fill(value);
+		await page.waitForTimeout(350);
+		assert.equal(await page.locator('pre').innerText(), 'DOMAIN-SUFFIX,cn.example.com\n');
+	}
+	await page.locator('select').selectOption('us');
+	assert.equal(await page.locator('pre').innerText(), 'DOMAIN-SUFFIX,cn.example.com\n');
+	const after = await page.request.get(`${base}/__test/stats`).then((response) => response.json());
+	assert.equal(after.ruleCalls, before.ruleCalls);
+});
