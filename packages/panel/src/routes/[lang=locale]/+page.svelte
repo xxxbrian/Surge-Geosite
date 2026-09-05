@@ -20,6 +20,7 @@
 	import { SSR_INITIAL_LIST_LIMIT } from '$lib/panel/constants';
 	import { t } from '$lib/panel/i18n';
 	import { createLatestRequest } from '$lib/panel/latest-request';
+	import { loadPanelIndex } from '$lib/panel/load-index';
 	import SidebarLinkGroup from '$lib/panel/sidebar-link-group.svelte';
 	import type { GeositeIndex, PanelLocale, PanelMode } from '$lib/panel/types';
 	import { countRuleLines, normalizeEtag } from '$lib/panel/utils';
@@ -60,11 +61,14 @@
 	let isRulesLoading: boolean;
 	let initError: string | null;
 	let isIndexHydrating: boolean;
+	let indexHydrationError: string | null;
+	let isMounted = false;
 
 	const rulesRequest = createLatestRequest();
+	const indexRequest = createLatestRequest();
 	let lastQueryKey = '';
 	let serverDataVersion = 0;
-	let lastHydratedServerDataVersion = 0;
+	let lastIndexAttemptVersion = 0;
 	let manualDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 	let copiedLinkKey: string | null = null;
 	let copiedQuickLinkTimer: ReturnType<typeof setTimeout> | null = null;
@@ -75,6 +79,7 @@
 
 	function applyServerData(next: PageData) {
 		rulesRequest.cancel();
+		indexRequest.cancel();
 		clearManualDebounceTimer();
 		const nextLocale = next.locale as PanelLocale;
 		locale = nextLocale;
@@ -97,6 +102,7 @@
 		isIndexLoading = false;
 		isRulesLoading = false;
 		isIndexHydrating = false;
+		indexHydrationError = null;
 		initError = next.initError ?? null;
 		lastQueryKey = selected ? `${selected}|${mode}|` : '';
 		serverDataVersion += 1;
@@ -115,7 +121,7 @@
 	})();
 	$: renderLimit = browser && hasFullIndex ? filteredNames.length : SSR_INITIAL_LIST_LIMIT;
 	$: displayNames = filteredNames.slice(0, renderLimit);
-	$: hasFullIndex = names.length > 0 && Object.keys(index).length >= names.length;
+	$: hasFullIndex = names.length > 0 && names.every((name) => Array.isArray(index[name]));
 
 	$: liveFilter = (() => {
 		const manual = manualFilter.trim().toLowerCase();
@@ -162,7 +168,9 @@
 		];
 	})();
 
-	$: if (initError) {
+	$: if (isIndexLoading) {
+		listCount = tr('initializing');
+	} else if (initError) {
 		listCount = tr('error');
 	} else {
 		listCount = tr('listsCount', { count: names.length });
@@ -180,16 +188,11 @@
 	}
 
 	$: if (
-		browser &&
-		serverDataVersion > 0 &&
-		serverDataVersion !== lastHydratedServerDataVersion &&
-		!isIndexLoading &&
-		!initError &&
-		names.length > 0 &&
-		!hasFullIndex
+		browser && isMounted &&
+		serverDataVersion !== lastIndexAttemptVersion && !hasFullIndex
 	) {
-		lastHydratedServerDataVersion = serverDataVersion;
-		void hydrateFullIndexIfNeeded();
+		lastIndexAttemptVersion = serverDataVersion;
+		void refreshIndex();
 	}
 
 	function resetMeta() {
@@ -258,79 +261,54 @@
 		}
 	}
 
-	async function initIndex() {
-		isIndexLoading = true;
+	async function refreshIndex() {
+		if (isIndexLoading || isIndexHydrating) return;
+		const initializing = names.length === 0;
+		const request = indexRequest.start();
+		isIndexLoading = initializing;
+		isIndexHydrating = !initializing;
 		initError = null;
+		indexHydrationError = null;
+		if (initializing) previewText = tr('loading');
 
 		try {
-			let response: Response | null = null;
-			for (let attempt = 0; attempt < 15; attempt += 1) {
-				response = await fetch('/geosite', { headers: { accept: 'application/json' } });
-				if (response.ok) {
-					break;
-				}
-
-				if (response.status !== 503) {
-					throw new Error(`${response.status} ${response.statusText}`);
-				}
-
-				listCount = tr('initializing');
-				previewText = tr('upstreamInitializing', { current: attempt + 1, total: 15 });
-				await new Promise((resolve) => setTimeout(resolve, 1200));
-			}
-
-			if (!response || !response.ok) {
-				throw new Error('geosite data not ready');
-			}
-
-			index = (await response.json()) as GeositeIndex;
-			names = Object.keys(index).sort();
-
-			if (names.length === 0) {
-				previewText = tr('indexEmpty');
-				selected = null;
-				listCount = tr('listsCount', { count: 0 });
-				return;
-			}
-
-			selected = names[0] ?? null;
-			selectedFilter = NONE_FILTER;
-			clearManualDebounceTimer();
-			manualFilter = '';
-			debouncedManualFilter = '';
-			previewText = tr('switchedDatasetLoading', { name: selected });
-			lastQueryKey = '';
-			await loadRules(null, true);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			initError = message;
-			listCount = tr('error');
-			previewText = tr('failedLoad', { message });
-		} finally {
-			isIndexLoading = false;
-		}
-	}
-
-	async function hydrateFullIndexIfNeeded() {
-		if (isIndexHydrating || hasFullIndex || names.length === 0 || initError) {
-			return;
-		}
-
-		isIndexHydrating = true;
-		try {
-			const response = await fetch('/geosite', {
-				headers: { accept: 'application/json' }
-			});
-			if (!response.ok) {
-				return;
-			}
-
-			const fullIndex = (await response.json()) as GeositeIndex;
+			const fullIndex = await loadPanelIndex(fetch, request.signal);
+			if (!request.isCurrent()) return;
 			index = fullIndex;
-		} catch {
-			// Keep current partial index when hydration fetch fails.
+			names = Object.keys(fullIndex).sort();
+
+			if (!selected || !Object.hasOwn(fullIndex, selected)) {
+				rulesRequest.cancel();
+				selected = names[0] ?? null;
+				selectedFilter = NONE_FILTER;
+				clearManualDebounceTimer();
+				manualFilter = '';
+				debouncedManualFilter = '';
+				lastQueryKey = '';
+				if (selected) {
+					await loadRules(null, true);
+				} else {
+					previewText = tr('indexEmpty');
+					isRulesLoading = false;
+					resetMeta();
+				}
+			} else if (selectedFilter !== NONE_FILTER && !fullIndex[selected].includes(selectedFilter)) {
+				selectedFilter = NONE_FILTER;
+			}
+		} catch (error) {
+			if (!request.isCurrent()) return;
+			const message = error instanceof Error ? error.message : String(error);
+			if (initializing) {
+				initError = message;
+				previewText = tr('failedLoad', { message });
+			} else {
+				indexHydrationError = message;
+			}
 		} finally {
-			isIndexHydrating = false;
+			if (request.isCurrent()) {
+				isIndexLoading = false;
+				isIndexHydrating = false;
+			}
 		}
 	}
 
@@ -388,14 +366,12 @@
 	}
 
 	onMount(() => {
-		if (names.length === 0 && !initError) {
-			void initIndex();
-		} else {
-			void hydrateFullIndexIfNeeded();
-		}
+		isMounted = true;
 
 		return () => {
+			isMounted = false;
 			rulesRequest.cancel();
+			indexRequest.cancel();
 			clearManualDebounceTimer();
 			if (copiedQuickLinkTimer) {
 				clearTimeout(copiedQuickLinkTimer);
@@ -515,11 +491,19 @@
 									</span>
 									</button>
 								{/each}
-						{#if browser && !hasFullIndex}
-							<p class="text-muted-foreground px-2 py-3 text-xs">
+						{#if isIndexHydrating}
+							<p class="text-muted-foreground px-2 py-3 text-xs" role="status">
 								{tr('indexHydrating')}
 							</p>
 						{/if}
+					{/if}
+					{#if indexHydrationError}
+						<p class="px-2 py-3 text-xs text-destructive" role="alert">{tr('indexHydrationFailed')}</p>
+					{/if}
+					{#if initError || indexHydrationError || (!names.length && !isIndexLoading)}
+						<Button variant="outline" class="w-full" onclick={() => refreshIndex()} disabled={isIndexLoading || isIndexHydrating}>
+							{tr('retryIndex')}
+						</Button>
 					{/if}
 				</div>
 			</CardContent>

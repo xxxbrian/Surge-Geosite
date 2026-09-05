@@ -73,3 +73,24 @@ test('equivalent manual tags and overridden dropdown changes preserve the previe
 	const after = await page.request.get(`${base}/__test/stats`).then((response) => response.json());
 	assert.equal(after.ruleCalls, before.ruleCalls);
 });
+
+
+for (const scenario of ['initial-error', 'hydrate-error']) {
+	test(`${scenario} exposes a retry and recovers after the service returns`, { timeout: 30_000 }, async (t) => {
+		const { page, base } = await openPanel(t, scenario);
+		const retry = page.getByRole('button', { name: '重新加载数据集', exact: true });
+		await retry.waitFor();
+		if (scenario === 'hydrate-error') {
+			assert.equal(await page.getByText('索引补全中...', { exact: true }).count(), 0);
+			assert.equal(await page.getByText('索引补全失败，已保留现有数据。', { exact: true }).count(), 1);
+		}
+		await page.request.get(`${base}/__test/recover`);
+		await retry.click();
+		await page.getByRole('button', { name: /^test49 / }).waitFor();
+		await page.waitForFunction(() => document.querySelector('pre')?.textContent === 'DOMAIN-SUFFIX,example.com\n');
+		assert.equal(await page.getByText('索引补全中...', { exact: true }).count(), 0);
+		assert.equal(await retry.count(), 0);
+		await page.getByRole('button', { name: /^test49 / }).click();
+		assert.deepEqual(await page.locator('select option').allTextContents(), ['(无)', 'cn', 'us']);
+	});
+}
