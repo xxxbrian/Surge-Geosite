@@ -19,6 +19,7 @@
 	import { buildRulesApiPath, buildRulesPublicPath } from '$lib/panel/api';
 	import { SSR_INITIAL_LIST_LIMIT } from '$lib/panel/constants';
 	import { t } from '$lib/panel/i18n';
+	import { createLatestRequest } from '$lib/panel/latest-request';
 	import SidebarLinkGroup from '$lib/panel/sidebar-link-group.svelte';
 	import type { GeositeIndex, PanelLocale, PanelMode } from '$lib/panel/types';
 	import { countRuleLines, normalizeEtag } from '$lib/panel/utils';
@@ -60,7 +61,7 @@
 	let initError: string | null;
 	let isIndexHydrating: boolean;
 
-	let loadToken = 0;
+	const rulesRequest = createLatestRequest();
 	let lastQueryKey = '';
 	let serverDataVersion = 0;
 	let lastHydratedServerDataVersion = 0;
@@ -73,6 +74,7 @@
 	$: tr = (key, vars = {}) => t(locale, key, vars);
 
 	function applyServerData(next: PageData) {
+		rulesRequest.cancel();
 		clearManualDebounceTimer();
 		const nextLocale = next.locale as PanelLocale;
 		locale = nextLocale;
@@ -214,7 +216,7 @@
 		}
 		lastQueryKey = queryKey;
 
-		const token = ++loadToken;
+		const request = rulesRequest.start();
 		isRulesLoading = true;
 		previewText = tr('loading');
 		resetMeta();
@@ -222,11 +224,12 @@
 
 		try {
 			const response = await fetch(buildRulesApiPath(mode, selected, filter), {
-				headers: { accept: 'text/plain' }
+				headers: { accept: 'text/plain' },
+				signal: request.signal
 			});
 			const body = await response.text();
 
-			if (token !== loadToken) {
+			if (!request.isCurrent()) {
 				return;
 			}
 
@@ -242,14 +245,14 @@
 			previewText = body.length === 0 ? tr('emptyResult') : body;
 			ruleLines = String(countRuleLines(body));
 		} catch (error) {
-			if (token !== loadToken) {
+			if (!request.isCurrent()) {
 				return;
 			}
 			const message = error instanceof Error ? error.message : String(error);
 			previewText = tr('requestFailed', { message });
 			resetMeta();
 		} finally {
-			if (token === loadToken) {
+			if (request.isCurrent()) {
 				isRulesLoading = false;
 			}
 		}
@@ -394,6 +397,7 @@
 		}
 
 		return () => {
+			rulesRequest.cancel();
 			clearManualDebounceTimer();
 			if (copiedQuickLinkTimer) {
 				clearTimeout(copiedQuickLinkTimer);
