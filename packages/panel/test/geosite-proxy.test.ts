@@ -9,7 +9,7 @@ function event(fetch: ReturnType<typeof vi.fn>, method = 'GET') {
 	});
 	return {
 		request, url: new URL(request.url), platform: { env: { GEOSITE_API: { fetch } } }
-	} as unknown as Parameters<typeof indexGet>[0];
+	} as unknown as Parameters<typeof indexGet>[0] & Parameters<typeof rulesGet>[0];
 }
 
 describe.each([['index', indexGet], ['rules', rulesGet]] as const)('%s proxy', (_, GET) => {
