@@ -529,6 +529,7 @@
 								class="w-full rounded-none border-r last:border-r-0 lg:w-auto"
 								onclick={() => onModeChange(item)}
 								aria-pressed={mode === item}
+								title={item === 'balanced' ? tr('balancedDescription') : undefined}
 							>
 								{item}
 							</Button>
