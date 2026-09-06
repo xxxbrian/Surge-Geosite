@@ -175,6 +175,7 @@
 	} else {
 		listCount = tr('listsCount', { count: names.length });
 	}
+	$: if (browser) document.documentElement.lang = locale;
 	$: canonicalPath = locale === 'en' ? '/en' : '/zh';
 	$: canonicalUrl = `${SITE_ORIGIN}${canonicalPath}`;
 
@@ -461,6 +462,7 @@
 				</div>
 				<Input
 					type="search"
+					aria-label={tr('searchPlaceholder')}
 					value={search}
 					oninput={(event) => (search = (event.currentTarget as HTMLInputElement).value)}
 					placeholder={tr('searchPlaceholder')}
@@ -481,6 +483,7 @@
 							<button
 								type="button"
 								on:click={() => onSelectDataset(name)}
+								aria-pressed={selected === name}
 								class={`hover:border-border flex w-full items-center justify-between border px-3 py-2 text-left text-sm transition-colors ${
 									selected === name ? 'border-primary text-primary bg-accent' : 'border-transparent'
 								}`}
@@ -525,6 +528,7 @@
 								size="sm"
 								class="w-full rounded-none border-r last:border-r-0 lg:w-auto"
 								onclick={() => onModeChange(item)}
+								aria-pressed={mode === item}
 							>
 								{item}
 							</Button>

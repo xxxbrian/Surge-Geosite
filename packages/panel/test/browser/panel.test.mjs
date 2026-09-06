@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { fork } from 'node:child_process';
 import { once } from 'node:events';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { after, before, test } from 'node:test';
 
 // Use an existing Playwright installation; the application does not need a browser dependency.
@@ -24,6 +27,11 @@ async function openPanel(t, scenario = 'normal') {
 	const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 	t.after(() => page.close());
 	const pageErrors = [];
+	const consoleErrors = [];
+	page.on('console', (message) => {
+		if (['error', 'warning'].includes(message.type())) consoleErrors.push(message.text());
+	});
+	if (scenario === 'normal') t.after(() => assert.deepEqual(consoleErrors, []));
 	page.on('pageerror', (error) => pageErrors.push(error.message));
 	t.after(() => assert.deepEqual(pageErrors, []));
 	await page.goto(`${base}/zh`);
@@ -94,3 +102,27 @@ for (const scenario of ['initial-error', 'hydrate-error']) {
 		assert.deepEqual(await page.locator('select option').allTextContents(), ['(无)', 'cn', 'us']);
 	});
 }
+
+
+test('selection controls expose their state and locale navigation updates the document language', { timeout: 30_000 }, async (t) => {
+	const { page } = await openPanel(t);
+	assert.equal(await page.locator('html').getAttribute('lang'), 'zh');
+	const strict = page.getByRole('button', { name: 'strict', exact: true });
+	await strict.click();
+	assert.equal(await strict.getAttribute('aria-pressed'), 'true');
+	assert.equal(await page.getByRole('button', { name: 'balanced', exact: true }).getAttribute('aria-pressed'), 'false');
+	await page.getByRole('link', { name: 'EN', exact: true }).click();
+	await page.waitForURL('**/en');
+	await page.waitForFunction(() => document.documentElement.lang === 'en');
+	await page.getByRole('searchbox', { name: 'Search datasets, e.g. google' }).fill('test49');
+	const dataset = page.getByRole('button', { name: /^test49 / });
+	await dataset.click();
+	assert.equal(await dataset.getAttribute('aria-pressed'), 'true');
+	await page.waitForFunction(() => document.querySelector('pre')?.textContent === 'DOMAIN-SUFFIX,example.com\n');
+	const artifacts = mkdtempSync(path.join(tmpdir(), 'surge-panel-regression-'));
+	await page.screenshot({ path: path.join(artifacts, 'desktop.png') });
+	await page.setViewportSize({ width: 390, height: 844 });
+	assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+	await page.screenshot({ path: path.join(artifacts, 'mobile.png'), fullPage: true });
+	t.diagnostic(`Screenshot evidence: ${artifacts}`);
+});
