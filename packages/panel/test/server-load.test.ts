@@ -53,3 +53,24 @@ it('awaits revalidation when there is no Cloudflare execution context', async ()
 	await next;
 	expect(returned).toBe(true);
 });
+
+it('rechecks stale rule previews and caches only the rebuilt current response', async () => {
+	const { load } = await import('../src/routes/[lang=locale]/+page.server');
+	let rulesCalls = 0;
+	const fetch = vi.fn().mockImplementation((url: string) => {
+		if (url === '/geosite') return Promise.resolve(indexResponse('v2'));
+		rulesCalls++;
+		return Promise.resolve(new Response(
+			rulesCalls === 1 ? 'DOMAIN-SUFFIX,old.example' : 'DOMAIN-SUFFIX,current.example',
+			{ headers: { 'x-upstream-etag': 'v2', ...(rulesCalls === 1 ? { 'x-stale': '1' } : {}) } }
+		));
+	});
+	const stale = await load(event(fetch));
+	expect(stale).toMatchObject({ previewText: 'DOMAIN-SUFFIX,old.example', stale: '是' });
+	const current = await load(event(fetch));
+	expect(current).toMatchObject({ previewText: 'DOMAIN-SUFFIX,current.example', stale: '否' });
+	expect(rulesCalls).toBe(2);
+	const cached = await load(event(fetch));
+	expect(cached).toMatchObject({ previewText: 'DOMAIN-SUFFIX,current.example', stale: '否' });
+	expect(rulesCalls).toBe(2);
+});

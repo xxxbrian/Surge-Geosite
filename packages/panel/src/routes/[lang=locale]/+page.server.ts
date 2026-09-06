@@ -184,13 +184,16 @@ export const load: PageServerLoad = async ({ params, fetch, platform }) => {
 				} else {
 					previewText = rulesText.length === 0 ? tr('emptyResult') : rulesText;
 					ruleLines = String(countRuleLines(rulesText));
-					rulesCache.set(rulesKey, {
-						text: rulesText,
-						etag: normalizeEtag(upstreamEtag),
-						stale: rulesResponse.headers.get('x-stale') === '1',
-						ruleLines
-					});
-					pruneRulesCache();
+					// A fallback body belongs to the previous snapshot, even when its upstream header is current.
+					if (rulesResponse.headers.get('x-stale') !== '1') {
+						rulesCache.set(rulesKey, {
+							text: rulesText,
+							etag: normalizeEtag(upstreamEtag),
+							stale: rulesResponse.headers.get('x-stale') === '1',
+							ruleLines
+						});
+						pruneRulesCache();
+					}
 				}
 			}
 		}
