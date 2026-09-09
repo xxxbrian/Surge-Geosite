@@ -48,13 +48,15 @@ describe("transpileRegexToSurge", () => {
   });
 
   test.each([String.raw`^EXAMPLE\.COM$`, String.raw`(^|\.)EXAMPLE\.COM$`])(
-    "does not report case-sensitive uppercase regex as lossless: %s",
+    "does not lower case-sensitive uppercase literal regex in any mode: %s",
     (pattern) => {
       expect(new RegExp(pattern).test("example.com")).toBe(false);
       const parsed = parseListsFromText({ demo: `regexp:${pattern}` });
-      const output = emitSurgeRuleset(resolveOneList(parsed, "demo"), { regexMode: "strict" });
-      expect(output.lines).toEqual([]);
-      expect(output.report.regex).toEqual({ total: 1, lossless: 0, widened: 0, unsupported: 1 });
+      for (const regexMode of ["strict", "balanced", "full"] as const) {
+        const output = emitSurgeRuleset(resolveOneList(parsed, "demo"), { regexMode });
+        expect(output.lines).toEqual([]);
+        expect(output.report.regex).toEqual({ total: 1, lossless: 0, widened: 0, unsupported: 1 });
+      }
     }
   );
 

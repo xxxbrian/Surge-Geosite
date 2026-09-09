@@ -25,6 +25,15 @@ export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTr
     };
   }
 
+  const lowercase = pattern.toLowerCase();
+  if (pattern !== lowercase && (EXACT_DOMAIN_PATTERN.test(lowercase) || SUFFIX_DOMAIN_PATTERN.test(lowercase))) {
+    return {
+      status: "unsupported",
+      rules: [],
+      reason: "Case-sensitive uppercase domain literals cannot be preserved by case-insensitive Surge rules."
+    };
+  }
+
   const exact = pattern.match(EXACT_DOMAIN_PATTERN);
   if (exact) {
     return {
@@ -181,6 +190,8 @@ function wildcardFromRegex(pattern: string): WildcardCandidate {
     }
 
     if (pattern.startsWith("(^|\\.)", index)) {
+      // Keep the subdomain branch only. Recovering root hosts with a leading *
+      // would also admit unrelated prefixes; omission is preferable here.
       out += "*.";
       index += "(^|\\.)".length - 1;
       continue;
@@ -252,6 +263,8 @@ function wildcardFromRegex(pattern: string): WildcardCandidate {
     }
 
     if (char === "." || isDomainChar(char)) {
+      // An unescaped dot is deliberately specialized to a literal dot. Do not
+      // replace it with * just to recover omitted hosts: that widens matching.
       out += char;
       continue;
     }
