@@ -7,6 +7,34 @@ import { resolveOneList } from "../src/resolver.js";
 import { emitSurgeRuleset } from "../src/surge.js";
 
 describe("transpileRegexToSurge", () => {
+  test.each([
+    String.raw`(?i)^EXAMPLE\.COM$`,
+    String.raw`\Aexample\.com\z`,
+    String.raw`(?i)\AEXAMPLE\.COM\z`
+  ])("supports simple RE2 literal-domain syntax losslessly: %s", (pattern) => {
+    expect(transpileRegexToSurge(pattern, "strict")).toEqual({
+      status: "lossless",
+      rules: [{ type: "DOMAIN", value: "example.com" }]
+    });
+  });
+
+  test.each([
+    String.raw`(?i)^cdn[0-9]+\.example\.com$`,
+    String.raw`(?i:example)\.com$`,
+    String.raw`^[[:alpha:]]+\.example\.com$`,
+    String.raw`^\Qexample.com\E$`,
+    String.raw`^\p{L}+\.example\.com$`
+  ])("reports unsupported RE2 syntax without aborting ordinary rules: %s", (pattern) => {
+    const list = resolveOneList(parseListsFromText({ demo: `example.org\nregexp:${pattern}` }), "demo");
+    for (const regexMode of ["strict", "balanced", "full"] as const) {
+      const output = emitSurgeRuleset(list, { regexMode });
+      expect(output.lines).toEqual(["DOMAIN-SUFFIX,example.org"]);
+      expect(output.report.regex).toEqual({ total: 1, lossless: 0, widened: 0, unsupported: 1 });
+      expect(output.report.unsupported[0]).toMatchObject({ pattern, source: { list: "DEMO", line: 2 } });
+      expect(() => emitSurgeRuleset(list, { regexMode, onUnsupportedRegex: "error" })).toThrow(SurgeEmitError);
+    }
+  });
+
   test("converts exact and suffix regex losslessly", () => {
     expect(transpileRegexToSurge("^github\\.com$", "strict")).toEqual({
       status: "lossless",

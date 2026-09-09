@@ -1,4 +1,5 @@
 import { GeositeParseError } from "./errors.js";
+import { hasUnsupportedRegexSyntax, normalizeSimpleRe2Pattern } from "./regex-syntax.js";
 import type { DomainRule, DomainRuleType, IncludeRule, SourceEntry } from "./types.js";
 
 const VALID_DOMAIN_CHAR = /^[a-z0-9.-]+$/;
@@ -187,8 +188,14 @@ function stripComment(input: string): string {
 }
 
 function validateRegex(pattern: string): void {
+  const normalized = normalizeSimpleRe2Pattern(pattern);
+  if (hasUnsupportedRegexSyntax(normalized)) {
+    // These entries are reported as unsupported during emission. A valid RE2
+    // construct outside the supported subset must not abort the entire dataset.
+    return;
+  }
   try {
-    void new RegExp(pattern);
+    void new RegExp(normalized);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new GeositeParseError(`invalid regexp ${JSON.stringify(pattern)}: ${message}`);

@@ -1,4 +1,5 @@
 import { registrableLabelIndex } from "./domain-safety.js";
+import { hasUnsupportedRegexSyntax, normalizeSimpleRe2Pattern } from "./regex-syntax.js";
 import type { RegexMode, RegexTranspileResult } from "./types.js";
 
 // Hosts are normalized to lowercase, but source regex literals remain case-sensitive.
@@ -15,6 +16,15 @@ interface WildcardCandidate {
 }
 
 export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTranspileResult {
+  pattern = normalizeSimpleRe2Pattern(pattern);
+  if (hasUnsupportedRegexSyntax(pattern)) {
+    return {
+      status: "unsupported",
+      rules: [],
+      reason: "Regex syntax is outside the supported Go/RE2 conversion subset."
+    };
+  }
+
   const exact = pattern.match(EXACT_DOMAIN_PATTERN);
   if (exact) {
     return {
