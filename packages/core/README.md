@@ -26,7 +26,7 @@ No filesystem or network access is required in core APIs.
 ## Regex Modes
 
 - `strict`: only lossless conversion is allowed.
-- `balanced`: allows heuristic wildcard conversion and reports widened matches.
+- `balanced`: prioritizes avoiding false matches and allows omissions in heuristic conversion.
 - `full`: balanced behavior plus permissive fallback for hard regex cases.
 
 Every emit call returns `report` with counts and itemized widened/unsupported entries.

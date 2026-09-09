@@ -1,3 +1,4 @@
+import { registrableLabelIndex } from "./domain-safety.js";
 import type { RegexMode, RegexTranspileResult } from "./types.js";
 
 // Hosts are normalized to lowercase, but source regex literals remain case-sensitive.
@@ -265,18 +266,14 @@ function getHeuristicWildcardSafety(value: string): WildcardCandidate["safety"] 
     return "none";
   }
 
-  const domainLabels = labels[0] === "*" ? labels.slice(1) : labels;
-  if (domainLabels.length < 2) {
-    return "unsafe";
-  }
-
-  const registrableLabel = domainLabels[domainLabels.length - 2];
+  const anchorIndex = registrableLabelIndex(labels);
+  const registrableLabel = labels[anchorIndex];
   if (!registrableLabel || registrableLabel === "*" || !/[a-z0-9]/i.test(registrableLabel)) {
     return "unsafe";
   }
 
-  const literalChars = domainLabels
-    .slice(0, -1)
+  const literalChars = labels
+    .slice(0, anchorIndex + 1)
     .join("")
     .replace(/\*/g, "").length;
   return literalChars >= MIN_WILDCARD_LITERAL_CHARS ? "safe" : "low-information";

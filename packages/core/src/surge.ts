@@ -1,3 +1,4 @@
+import { hasRegistrableDomainAnchor } from "./domain-safety.js";
 import { SurgeEmitError } from "./errors.js";
 import { transpileRegexToSurge } from "./regex.js";
 import type {
@@ -13,7 +14,7 @@ import type {
 } from "./types.js";
 
 const DEFAULT_REGEX_MODE: RegexMode = "balanced";
-const OVERBROAD_WILDCARD_REASON = "Generated wildcard rule is too broad to emit safely.";
+const OVERBROAD_WILDCARD_REASON = "Generated rule has no registrable domain anchor and is too broad to emit safely.";
 
 export function emitSurgeRuleset(list: ResolvedList, options: EmitSurgeOptions = {}): EmitSurgeResult {
   const regexMode = options.regexMode ?? DEFAULT_REGEX_MODE;
@@ -87,7 +88,7 @@ function handleRegexRule(
     return;
   }
 
-  if (result.rules.some(isOverbroadRule)) {
+  if (result.status !== "lossless" && result.rules.some(isOverbroadRule)) {
     report.regex.unsupported += 1;
     const issue = makeIssue(entry, regexMode, OVERBROAD_WILDCARD_REASON);
 
@@ -118,19 +119,10 @@ function handleRegexRule(
 }
 
 function isOverbroadRule(rule: Pick<SurgeRule, "type" | "value">): boolean {
-  if (rule.type !== "DOMAIN-WILDCARD") {
+  if (rule.type !== "DOMAIN-WILDCARD" && rule.type !== "DOMAIN-SUFFIX") {
     return false;
   }
-
-  if (rule.value === "*") {
-    return true;
-  }
-
-  if (!rule.value.startsWith("*.")) {
-    return false;
-  }
-
-  return !rule.value.slice(2).includes(".");
+  return !hasRegistrableDomainAnchor(rule.value);
 }
 
 function makeIssue(entry: DomainRule, mode: RegexMode, reason: string): RegexIssue {

@@ -79,6 +79,29 @@ describe("transpileRegexToSurge", () => {
       reason: "Low-information regex converted to heuristic DOMAIN-WILDCARD pattern in full mode."
     });
   });
+
+  test.each(["com.cn", "co.uk", "github.io", "pages.dev", "foo.ck"])(
+    "does not widen a registrant pattern to the public suffix %s",
+    (suffix) => {
+      const pattern = String.raw`^[a-z]{3}\.` + suffix.replaceAll(".", String.raw`\.`) + "$";
+      const parsed = parseListsFromText({ demo: `regexp:${pattern}` });
+      for (const regexMode of ["balanced", "full"] as const) {
+        const output = emitSurgeRuleset(resolveOneList(parsed, "demo"), { regexMode });
+        expect(output.lines).toEqual([]);
+        expect(output.report.regex.unsupported).toBe(1);
+      }
+    }
+  );
+
+  test.each(["com.cn", "co.uk", "github.io", "pages.dev"])(
+    "keeps heuristics anchored to a registrant beneath %s",
+    (suffix) => {
+      const pattern = String.raw`^cdn[0-9]+\.example\.` + suffix.replaceAll(".", String.raw`\.`) + "$";
+      expect(transpileRegexToSurge(pattern, "balanced").rules).toEqual([
+        { type: "DOMAIN-WILDCARD", value: `cdn*.example.${suffix}` }
+      ]);
+    }
+  );
 });
 
 describe("emitSurgeRuleset", () => {
@@ -147,7 +170,18 @@ describe("emitSurgeRuleset", () => {
       unsupported: 2
     });
     expect(full.report.unsupported.map((issue) => issue.reason)).toContain(
-      "Generated wildcard rule is too broad to emit safely."
+      "Generated rule has no registrable domain anchor and is too broad to emit safely."
     );
+  });
+
+  test("blocks a full-mode public-suffix fallback while preserving an explicit suffix regex", () => {
+    const parsed = parseListsFromText({
+      fallback: String.raw`regexp:^foo(?=bar)\.com\.cn$`,
+      explicit: String.raw`regexp:(^|\.)com\.cn$`
+    });
+    expect(emitSurgeRuleset(resolveOneList(parsed, "fallback"), { regexMode: "full" }).lines).toEqual([]);
+    expect(emitSurgeRuleset(resolveOneList(parsed, "explicit"), { regexMode: "strict" }).lines).toEqual([
+      "DOMAIN-SUFFIX,com.cn"
+    ]);
   });
 });

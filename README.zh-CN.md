@@ -50,7 +50,7 @@ RULE-SET,https://surge.bojin.co/geosite/strict/category-ads-all,REJECT
 ### 模式说明
 
 - `strict`：仅接受无损 regex 转换
-- `balanced`：可控降级（默认）
+- `balanced`：保守转换，优先避免误匹配，允许遗漏部分规则（默认）
 - `full`：最宽松转换（覆盖范围最大，误匹配风险也最高）
 
 ## 维护者说明

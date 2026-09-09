@@ -50,7 +50,7 @@ RULE-SET,https://surge.bojin.co/geosite/strict/category-ads-all,REJECT
 ### Mode Guide
 
 - `strict`: only lossless regex conversion
-- `balanced`: controlled downgrade (default)
+- `balanced`: conservative conversion that prioritizes avoiding false matches; omissions are allowed (default)
 - `full`: most permissive conversion (widest coverage, highest over-match risk)
 
 ## For Maintainers
