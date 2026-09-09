@@ -1,7 +1,9 @@
 import type { RegexMode, RegexTranspileResult } from "./types.js";
 
-const EXACT_DOMAIN_PATTERN = /^\^([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
-const SUFFIX_DOMAIN_PATTERN = /^\(\^\|\\\.\)([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
+// Hosts are normalized to lowercase, but source regex literals remain case-sensitive.
+// An uppercase literal must not be lowered and then reported as lossless.
+const EXACT_DOMAIN_PATTERN = /^\^([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/;
+const SUFFIX_DOMAIN_PATTERN = /^\(\^\|\\\.\)([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/;
 const REPEATED_SUBDOMAIN_PATTERN = /^\^\(\.\+\\\.\)\*([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
 const ADVANCED_TOKENS_PATTERN = /\(\?<?[=!]|\\[1-9]/;
 const MIN_WILDCARD_LITERAL_CHARS = 3;

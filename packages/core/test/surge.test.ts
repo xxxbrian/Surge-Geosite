@@ -19,6 +19,17 @@ describe("transpileRegexToSurge", () => {
     });
   });
 
+  test.each([String.raw`^EXAMPLE\.COM$`, String.raw`(^|\.)EXAMPLE\.COM$`])(
+    "does not report case-sensitive uppercase regex as lossless: %s",
+    (pattern) => {
+      expect(new RegExp(pattern).test("example.com")).toBe(false);
+      const parsed = parseListsFromText({ demo: `regexp:${pattern}` });
+      const output = emitSurgeRuleset(resolveOneList(parsed, "demo"), { regexMode: "strict" });
+      expect(output.lines).toEqual([]);
+      expect(output.report.regex).toEqual({ total: 1, lossless: 0, widened: 0, unsupported: 1 });
+    }
+  );
+
   test("widens complex regex in balanced mode", () => {
     expect(transpileRegexToSurge("^cdn\\d-epicgames-\\d+\\.file\\.myqcloud\\.com$", "balanced")).toEqual({
       status: "widened",
