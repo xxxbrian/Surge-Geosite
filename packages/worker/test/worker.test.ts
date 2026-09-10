@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, test } from "vitest";
 
 import {
@@ -6,12 +8,23 @@ import {
   type ExecutionContextLike,
   type R2BucketLike,
   type R2ObjectBodyLike,
+  type R2ObjectLike,
   type R2PutOptionsLike,
   type WorkerEnv
 } from "../src/index.js";
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 class MemoryR2Object implements R2ObjectBodyLike {
-  constructor(private readonly data: Uint8Array) {}
+  constructor(
+    private readonly data: Uint8Array,
+    readonly etag: string,
+    readonly customMetadata: Record<string, string> = {}
+  ) {}
 
   async text(): Promise<string> {
     return new TextDecoder().decode(this.data);
@@ -23,25 +36,30 @@ class MemoryR2Object implements R2ObjectBodyLike {
 }
 
 class MemoryR2Bucket implements R2BucketLike {
-  private readonly store = new Map<string, Uint8Array>();
+  private readonly store = new Map<string, MemoryR2Object>();
 
-  async get(key: string): Promise<R2ObjectBodyLike | null> {
-    const value = this.store.get(key);
-    return value ? new MemoryR2Object(value) : null;
+  async head(key: string): Promise<R2ObjectLike | null> {
+    return this.store.get(key) ?? null;
   }
 
-  async put(key: string, value: string | ArrayBuffer | Uint8Array, _options?: R2PutOptionsLike): Promise<void> {
-    if (typeof value === "string") {
-      this.store.set(key, new TextEncoder().encode(value));
-      return;
-    }
+  async get(key: string): Promise<R2ObjectBodyLike | null> {
+    return this.store.get(key) ?? null;
+  }
 
-    if (value instanceof Uint8Array) {
-      this.store.set(key, value);
-      return;
+  async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<R2ObjectLike | null> {
+    const current = this.store.get(key);
+    const condition = options?.onlyIf;
+    if (condition?.etagMatches !== undefined && current?.etag !== condition.etagMatches) {
+      return null;
     }
-
-    this.store.set(key, new Uint8Array(value));
+    if (condition?.etagDoesNotMatch === "*" ? current :
+      condition?.etagDoesNotMatch !== undefined && current?.etag === condition.etagDoesNotMatch) {
+      return null;
+    }
+    const data = typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
+    const object = new MemoryR2Object(data, createHash("md5").update(data).digest("hex"), { ...options?.customMetadata });
+    this.store.set(key, object);
+    return object;
   }
 
   async delete(key: string): Promise<void> {
@@ -248,6 +266,52 @@ describe("refreshGeositeRun", () => {
     const latest = JSON.parse(await latestRaw!.text()) as { upstream: { etag: string } };
     expect(latest.upstream.etag).toBe("etag-other-v3");
   });
+
+  test.each(["head-unchanged", "get-unchanged", "updated", "initialization"] as const)(
+    "conditionally publishes latest during a concurrent %s refresh",
+    async (scenario) => {
+      const entered = deferred<void>();
+      const release = deferred<void>();
+      class InterleavedBucket extends MemoryR2Bucket {
+        armed = false;
+        override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+          if (this.armed && key === "state/latest.json") {
+            this.armed = false;
+            entered.resolve();
+            await release.promise;
+          }
+          return super.put(key, value, options);
+        }
+      }
+      const bucket = new InterleavedBucket();
+      const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+      if (scenario !== "initialization") {
+        await bucket.putJson("state/latest.json", makeLatestState("cas-v1"));
+      }
+      const slowEtag = scenario.endsWith("unchanged") ? "cas-v1" : "cas-v2";
+      const slowFetch: typeof fetch = async (_input, init) => {
+        if (init?.method === "HEAD") {
+          return new Response(null, scenario === "get-unchanged" ? { status: 405 } : { headers: { etag: slowEtag } });
+        }
+        return new Response(makeDlcYaml({ google: ["domain:slow.example"] }), { headers: { etag: slowEtag } });
+      };
+      bucket.armed = true;
+      const slow = refreshGeositeRun(env, { fetchImpl: slowFetch });
+      await entered.promise;
+      const fast = await refreshGeositeRun(env, {
+        fetchImpl: async (_input, init) => new Response(
+          init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:fast.example"] }),
+          { headers: { etag: "cas-v3" } }
+        )
+      });
+      expect(fast.updated).toBe(true);
+      release.resolve();
+      expect(await slow).toMatchObject({ updated: false, reason: "superseded", etag: "cas-v3" });
+      const latest = JSON.parse(await (await bucket.get("state/latest.json"))!.text());
+      expect(latest.upstream.etag).toBe("cas-v3");
+      expect(latest.previousCacheKey).toBe(scenario === "initialization" ? null : "cas-v1");
+    }
+  );
 
   test("refuses to publish invalid snapshot payload", async () => {
     const bucket = new MemoryR2Bucket();

@@ -32,12 +32,20 @@ const artifactBuildLocks = new Map<string, Promise<ArtifactBuildResult>>();
 const remoteBinaryCacheLocks = new Map<string, Promise<ReadThroughRemoteBinaryResult>>();
 const geositeRefreshLocks = new WeakMap<R2BucketLike, Promise<RefreshResult>>();
 
-export interface R2ObjectBodyLike {
+// Narrow adapter matching the R2 Workers API; put returns null when onlyIf fails.
+export interface R2ObjectLike {
+  etag: string;
+  customMetadata?: Record<string, string>;
+}
+
+export interface R2ObjectBodyLike extends R2ObjectLike {
   text(): Promise<string>;
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export interface R2PutOptionsLike {
+  onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string };
+  customMetadata?: Record<string, string>;
   httpMetadata?: {
     contentType?: string;
     cacheControl?: string;
@@ -45,8 +53,9 @@ export interface R2PutOptionsLike {
 }
 
 export interface R2BucketLike {
+  head(key: string): Promise<R2ObjectLike | null>;
   get(key: string): Promise<R2ObjectBodyLike | null>;
-  put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<void>;
+  put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<R2ObjectLike | null>;
   delete?(key: string): Promise<void>;
 }
 
@@ -116,7 +125,7 @@ type GeositeIndex = Record<string, string[]>;
 
 interface RefreshResult {
   updated: boolean;
-  reason: "etag-unchanged" | "etag-updated";
+  reason: "etag-unchanged" | "etag-updated" | "superseded";
   checkedAt: string;
   etag: string;
   listCount: number;
@@ -216,7 +225,9 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   const yamlUrl = env.UPSTREAM_YAML_URL ?? DEFAULT_UPSTREAM_YAML_URL;
   const userAgent = env.UPSTREAM_USER_AGENT ?? DEFAULT_UPSTREAM_USER_AGENT;
 
-  const current = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
+  const currentObject = await env.GEOSITE_BUCKET.get(LATEST_STATE_KEY);
+  const current = currentObject ? JSON.parse(await currentObject.text()) as LatestState : null;
+  const expectedEtag = currentObject?.etag ?? null;
 
   const observedHeadEtag = await checkUpstreamYamlEtag(yamlUrl, userAgent, fetchImpl);
   if (observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
@@ -224,15 +235,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
       ...current,
       checkedAt
     };
-    await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, unchangedState);
-
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: observedHeadEtag,
-      listCount: current.snapshot.listCount
-    };
+    return publishLatestState(env.GEOSITE_BUCKET, unchangedState, expectedEtag, false);
   }
 
   const downloadResponse = await fetchImpl(yamlUrl, {
@@ -254,15 +257,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
       ...current,
       checkedAt
     };
-    await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, unchangedState);
-
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: computedEtag,
-      listCount: current.snapshot.listCount
-    };
+    return publishLatestState(env.GEOSITE_BUCKET, unchangedState, expectedEtag, false);
   }
 
   const sources = parseSourcesFromDlcPlainYaml(new TextDecoder().decode(yamlBytes));
@@ -310,28 +305,35 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
     checkedAt
   };
 
-  const latestBeforeWrite = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
-  if (latestBeforeWrite && latestBeforeWrite.upstream.cacheKey !== current?.upstream.cacheKey) {
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: latestBeforeWrite.upstream.etag,
-      listCount: latestBeforeWrite.snapshot.listCount
-    };
+  const result = await publishLatestState(env.GEOSITE_BUCKET, nextState, expectedEtag, true);
+  if (result.updated) {
+    snapshotCache.clear();
+    resolvedCache.clear();
   }
+  return result;
+}
 
-  await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, nextState);
-
-  snapshotCache.clear();
-  resolvedCache.clear();
-
+async function publishLatestState(
+  bucket: R2BucketLike,
+  next: LatestState,
+  expectedEtag: string | null,
+  updated: boolean
+): Promise<RefreshResult> {
+  // Compare the object read before any upstream work, including first initialization.
+  const written = await bucket.put(LATEST_STATE_KEY, `${JSON.stringify(next)}\n`, {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+    onlyIf: expectedEtag === null ? { etagDoesNotMatch: "*" } : { etagMatches: expectedEtag }
+  });
+  const state = written ? next : await readJson<LatestState>(bucket, LATEST_STATE_KEY);
+  if (!state) {
+    throw new Error("latest state disappeared during publication");
+  }
   return {
-    updated: true,
-    reason: "etag-updated",
-    checkedAt,
-    etag: computedEtag,
-    listCount
+    updated: written !== null && updated,
+    reason: written === null ? "superseded" : updated ? "etag-updated" : "etag-unchanged",
+    checkedAt: state.checkedAt,
+    etag: state.upstream.etag,
+    listCount: state.snapshot.listCount
   };
 }
 
