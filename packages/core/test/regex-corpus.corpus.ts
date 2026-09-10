@@ -1,30 +1,19 @@
-import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
 
 import { afterAll, describe, expect, test } from "vitest";
 
 import { parseListsFromText } from "../src/parser.js";
-import { resolveAllLists } from "../src/resolver.js";
+import { hasUnsupportedRegexSyntax, normalizeSimpleRe2Pattern } from "../src/regex-syntax.js";
 import { emitSurgeRuleset } from "../src/surge.js";
-import type { DomainRule, RegexMode, SurgeRule } from "../src/types.js";
+import type { DomainRule, RegexMode, SourceEntry, SurgeRule } from "../src/types.js";
 
 const MODES: RegexMode[] = ["strict", "balanced", "full"];
-const DLC_TARBALL_URL = "https://github.com/v2fly/domain-list-community/archive/refs/heads/master.tar.gz";
-const TRANCO_URL = "https://tranco-list.eu/top-1m.csv.zip";
-const CACHE_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "node_modules",
-  ".vitest",
-  "regex-corpus"
-);
-const DLC_DATA_DIR = path.join(CACHE_DIR, "domain-list-community-master", "data");
-const TRANCO_CSV = path.join(CACHE_DIR, "top-1m.csv");
-const CORPUS_TXT = path.join(CACHE_DIR, "corpus.txt");
+const DLC_DATA_DIR = requiredInputPath("REGEX_CORPUS_DLC_DATA_DIR");
+const TRANCO_CSV = requiredInputPath("REGEX_CORPUS_TRANCO_CSV");
 const TRANCO_LIMIT = readPositiveInt(process.env.REGEX_CORPUS_TRANCO_LIMIT, 1_000_000);
 const OVERMATCH_LIMIT = readPositiveInt(process.env.REGEX_CORPUS_OVERMATCH_LIMIT, 50);
 const OVERMATCH_FACTOR = readPositiveInt(process.env.REGEX_CORPUS_OVERMATCH_FACTOR, 20);
@@ -38,12 +27,20 @@ interface AuditCase {
   name: string;
   source: string;
   pattern: string;
+  referencePattern: string | null;
   mode: RegexMode;
   rules: Array<Pick<SurgeRule, "type" | "value">>;
 }
 
 interface AuditResult {
   failures: string[];
+  counts: {
+    expected: number;
+    actual: number;
+    overmatches: number;
+    omissions: number;
+    oracleUnavailable: number;
+  };
 }
 
 interface WorkerSlot {
@@ -57,30 +54,49 @@ interface QueueItem {
   reject: (error: Error) => void;
 }
 
-let workerPool: AuditWorkerPool;
-
-async function createAuditContext(): Promise<{ cases: AuditCase[] }> {
-  await ensureCorpusCache();
-
-  const sources = await loadListsFromDirectory(DLC_DATA_DIR);
+async function createAuditContext(): Promise<{ cases: AuditCase[]; directory: string; corpusPath: string }> {
+  const [sources, trancoBytes] = await Promise.all([
+    loadListsFromDirectory(DLC_DATA_DIR),
+    readFile(TRANCO_CSV)
+  ]);
+  const sourceHash = createHash("sha256");
+  for (const name of Object.keys(sources).sort()) {
+    sourceHash.update(name).update("\0").update(sources[name]!).update("\0");
+  }
+  const dlcSha256 = sourceHash.digest("hex");
+  const trancoSha256 = createHash("sha256").update(trancoBytes).digest("hex");
+  verifyDigest("REGEX_CORPUS_DLC_SHA256", dlcSha256);
+  verifyDigest("REGEX_CORPUS_TRANCO_SHA256", trancoSha256);
   const parsed = parseListsFromText(sources);
-  const resolved = resolveAllLists(parsed);
-  const regexEntries = collectRegexEntries(resolved);
-  const corpus = await buildCorpus(sources);
-  await writeFile(CORPUS_TXT, `${corpus.join("\n")}\n`, "utf8");
+  // Each case emits one source regex. Includes and affiliations only duplicate
+  // these patterns, so graph resolution adds no coverage to this audit.
+  const regexEntries = collectRegexEntries(parsed);
+  const corpus = buildCorpus(sources, trancoBytes.toString("utf8"));
+  const directory = await mkdtemp(path.join(os.tmpdir(), "surge-geosite-corpus-"));
+  const corpusPath = path.join(directory, "corpus.txt");
+  await writeFile(corpusPath, `${corpus.join("\n")}\n`, "utf8");
+  console.info("Corpus inputs:", JSON.stringify({
+    dlcDataDir: DLC_DATA_DIR, dlcSha256, trancoCsv: TRANCO_CSV, trancoSha256,
+    trancoLimit: TRANCO_LIMIT, domains: corpus.length, regexes: regexEntries.length,
+    overmatchLimit: OVERMATCH_LIMIT, overmatchFactor: OVERMATCH_FACTOR
+  }));
 
   return {
-    cases: regexEntries.flatMap((entry) => makeAuditCases(entry))
+    cases: regexEntries.flatMap((entry) => makeAuditCases(entry)),
+    directory,
+    corpusPath
   };
 }
 
 function makeAuditCases(entry: DomainRule): AuditCase[] {
+  const normalized = normalizeSimpleRe2Pattern(entry.value);
   return MODES.map((mode) => {
     const emitted = emitSurgeRuleset({ name: entry.source.list, entries: [entry] }, { regexMode: mode });
     return {
       name: `${entry.source.list}:${entry.source.line} ${mode} ${entry.value}`,
       source: `${entry.source.list}:${entry.source.line}`,
       pattern: entry.value,
+      referencePattern: hasUnsupportedRegexSyntax(normalized) ? null : normalized,
       mode,
       rules: emitted.rules.map((rule) => ({ type: rule.type, value: rule.value }))
     };
@@ -114,7 +130,8 @@ class AuditWorkerPool {
           if (message.error) {
             item.reject(new Error(message.error));
           } else {
-            item.resolve(message.result ?? { failures: [] });
+            if (message.result) item.resolve(message.result);
+            else item.reject(new Error("Corpus worker returned no result"));
           }
         }
 
@@ -124,7 +141,7 @@ class AuditWorkerPool {
       worker.on("error", (error) => {
         slot.busy = false;
         for (const item of this.pending.values()) {
-          item.reject(error);
+          item.reject(error instanceof Error ? error : new Error(String(error)));
         }
         this.pending.clear();
       });
@@ -165,72 +182,38 @@ class AuditWorkerPool {
 }
 
 const auditContext = await createAuditContext();
-workerPool = new AuditWorkerPool(WORKER_COUNT, CORPUS_TXT);
+const workerPool = new AuditWorkerPool(WORKER_COUNT, auditContext.corpusPath);
+const totals = Object.fromEntries(MODES.map((mode) => [mode, {
+  expected: 0, actual: 0, overmatches: 0, omissions: 0, oracleUnavailable: 0
+}])) as Record<RegexMode, AuditResult["counts"]>;
 
 afterAll(async () => {
   await workerPool.close();
+  await rm(auditContext.directory, { recursive: true, force: true });
+  console.info("Corpus match counts (rule/domain pairs):", JSON.stringify(totals));
 });
 
 describe("regex conversion corpus audit", () => {
   test.concurrent.each(auditContext.cases)("$name", async (auditCase) => {
     const result = await workerPool.run(auditCase);
+    for (const key of Object.keys(result.counts) as Array<keyof AuditResult["counts"]>) {
+      totals[auditCase.mode][key] += result.counts[key];
+    }
     expect(result.failures).toEqual([]);
   });
 });
 
-async function ensureCorpusCache(): Promise<void> {
-  await mkdir(CACHE_DIR, { recursive: true });
-  await Promise.all([ensureDlcCache(), ensureTrancoCache()]);
+function requiredInputPath(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`test:corpus requires ${name}; see packages/core/README.md`);
+  return path.resolve(value);
 }
 
-async function ensureDlcCache(): Promise<void> {
-  if (existsSync(DLC_DATA_DIR)) {
-    return;
+function verifyDigest(name: string, actual: string): void {
+  const expected = process.env[name];
+  if (expected && expected.toLowerCase() !== actual) {
+    throw new Error(`${name} mismatch: expected ${expected}, received ${actual}`);
   }
-
-  const archivePath = path.join(CACHE_DIR, "domain-list-community.tar.gz");
-  await downloadFile(DLC_TARBALL_URL, archivePath);
-  await rm(path.join(CACHE_DIR, "domain-list-community-master"), { recursive: true, force: true });
-  await runCommand("tar", ["-xzf", archivePath, "-C", CACHE_DIR]);
-}
-
-async function ensureTrancoCache(): Promise<void> {
-  if (existsSync(TRANCO_CSV)) {
-    return;
-  }
-
-  const archivePath = path.join(CACHE_DIR, "top-1m.csv.zip");
-  await downloadFile(TRANCO_URL, archivePath);
-  await runCommand("unzip", ["-o", archivePath, "-d", CACHE_DIR]);
-}
-
-async function runCommand(command: string, args: string[]): Promise<void> {
-  const { execFile } = await import("node:child_process");
-  await new Promise<void>((resolve, reject) => {
-    execFile(command, args, { maxBuffer: 1024 * 1024 * 20 }, (error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-async function downloadFile(url: string, outputPath: string): Promise<void> {
-  const response = await fetch(url, {
-    headers: {
-      accept: "application/octet-stream",
-      "user-agent": "surge-geosite-regex-corpus-test/1"
-    }
-  });
-
-  if (!response.ok || !response.body) {
-    throw new Error(`failed to download ${url}: HTTP ${response.status}`);
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  await writeFile(outputPath, Buffer.from(arrayBuffer));
 }
 
 async function loadListsFromDirectory(dataDir: string): Promise<Record<string, string>> {
@@ -250,11 +233,11 @@ async function loadListsFromDirectory(dataDir: string): Promise<Record<string, s
   return output;
 }
 
-function collectRegexEntries(resolved: Record<string, { entries: DomainRule[] }>): DomainRule[] {
+function collectRegexEntries(parsed: Record<string, SourceEntry[]>): DomainRule[] {
   const seen = new Set<string>();
   const output: DomainRule[] = [];
 
-  for (const entry of Object.values(resolved).flatMap((list) => list.entries)) {
+  for (const entry of Object.keys(parsed).sort().flatMap((name) => parsed[name]!)) {
     if (entry.type !== "regexp" || seen.has(entry.value)) {
       continue;
     }
@@ -265,7 +248,7 @@ function collectRegexEntries(resolved: Record<string, { entries: DomainRule[] }>
   return output;
 }
 
-async function buildCorpus(sources: Record<string, string>): Promise<string[]> {
+function buildCorpus(sources: Record<string, string>, trancoContent: string): string[] {
   const domains = new Set<string>();
 
   for (const content of Object.values(sources)) {
@@ -276,7 +259,7 @@ async function buildCorpus(sources: Record<string, string>): Promise<string[]> {
     }
   }
 
-  for (const domain of await loadTrancoDomains()) {
+  for (const domain of loadTrancoDomains(trancoContent)) {
     domains.add(domain);
   }
 
@@ -287,8 +270,7 @@ async function buildCorpus(sources: Record<string, string>): Promise<string[]> {
   return [...domains].sort();
 }
 
-async function loadTrancoDomains(): Promise<string[]> {
-  const content = await readFile(TRANCO_CSV, "utf8");
+function loadTrancoDomains(content: string): string[] {
   const domains: string[] = [];
 
   for (const line of content.split(/\r?\n/)) {
@@ -343,7 +325,11 @@ function generatedStressDomains(): string[] {
     }
   }
 
-  output.push("a190a.com", "hs12.vip", "91porn.best", "sub.91porn.cool");
+  output.push(
+    "a190a.com", "hs12.vip", "91porn.best", "sub.91porn.cool", "microsoft.com.cn",
+    "nisservice.10010.com", "nis.service.10010.com", "cdn-akamai-123.gog-services.com",
+    "cdn-akamai-.123.gog-services.com", "apiproxy-device-prod-nlb-123.amazonaws.com"
+  );
   return output;
 }
 

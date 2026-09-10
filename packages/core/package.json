@@ -17,7 +17,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:corpus": "vitest run --config vitest.corpus.config.ts"
   },
   "dependencies": {
     "tldts": "^7.4.12"

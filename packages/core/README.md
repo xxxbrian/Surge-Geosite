@@ -30,3 +30,13 @@ No filesystem or network access is required in core APIs.
 - `full`: balanced behavior plus permissive fallback for hard regex cases.
 
 Every emit call returns `report` with counts and itemized widened/unsupported entries.
+
+## Tests
+
+`pnpm test` uses offline fixtures. The optional corpus audit requires local inputs:
+
+```sh
+REGEX_CORPUS_DLC_DATA_DIR=/path/to/dlc/data \
+REGEX_CORPUS_TRANCO_CSV=/path/to/top-1m.csv \
+pnpm --filter @surge-geosite/core test:corpus
+```
