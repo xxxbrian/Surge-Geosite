@@ -4,6 +4,8 @@ import config from "./vitest.config.js";
 export default defineConfig({
   test: {
     ...config.test,
-    include: ["test/**/*.corpus.ts"]
+    include: ["test/**/*.corpus.ts"],
+    silent: false,
+    disableConsoleIntercept: true
   }
 });

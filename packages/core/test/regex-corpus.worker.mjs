@@ -33,7 +33,7 @@ export function auditRegexCase(auditCase, corpus, limits = { overmatchLimit: 50,
     return { failures, counts };
   }
 
-  const original = new RegExp(auditCase.referencePattern ?? auditCase.pattern);
+  const original = new RegExp(normalizeReferencePattern(auditCase.referencePattern ?? auditCase.pattern));
   const matchers = auditCase.rules.map(compileSurgeRule);
   const extraSamples = [];
   const omittedSamples = [];
@@ -69,6 +69,14 @@ export function auditRegexCase(auditCase, corpus, limits = { overmatchLimit: 50,
   }
 
   return { failures, counts };
+}
+
+export function normalizeReferencePattern(pattern) {
+  const repeated = pattern.match(/^\^\(\.\+\\\.\)\*([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i);
+  // .+ already crosses dots: one nonempty prefix ending in a dot represents any
+  // positive number of these groups. This equivalent oracle avoids exponential
+  // JavaScript backtracking; Go/RE2 does not have that runtime behavior.
+  return repeated ? `^(?:.+\\.)?${repeated[1]}$` : pattern;
 }
 
 function compileSurgeRule(rule) {

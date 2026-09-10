@@ -4,7 +4,7 @@ import { parseListText } from "../src/parser.js";
 import { hasUnsupportedRegexSyntax, normalizeSimpleRe2Pattern } from "../src/regex-syntax.js";
 import { emitSurgeRuleset } from "../src/surge.js";
 import type { DomainRule, RegexMode } from "../src/types.js";
-import { auditRegexCase } from "./regex-corpus.worker.mjs";
+import { auditRegexCase, normalizeReferencePattern } from "./regex-corpus.worker.mjs";
 
 function audit(pattern: string, mode: RegexMode, domains: string[]) {
   const entries = parseListText("fixture", `regexp:${pattern}`) as DomainRule[];
@@ -17,6 +17,17 @@ function audit(pattern: string, mode: RegexMode, domains: string[]) {
 }
 
 describe("regex semantic audit", () => {
+  test("uses an equivalent reference for repeated arbitrary subdomains", () => {
+    const pattern = String.raw`^(.+\.)*zh\.okaapps\.com$`;
+    const original = new RegExp(pattern);
+    const reference = new RegExp(normalizeReferencePattern(pattern));
+    for (const prefix of ["", ".", "..", "a.", "a.b.", "a..b.", "a\n.", "a-"]) {
+      for (const suffix of ["zh.okaapps.com", "notzh.okaapps.com", "zh.okaapps.com.evil.net"]) {
+        expect(reference.test(prefix + suffix)).toBe(original.test(prefix + suffix));
+      }
+    }
+  });
+
   test.each([String.raw`^example\.com$`, String.raw`(^|\.)example\.com$`, String.raw`(?i)\AEXAMPLE\.COM\z`])(
     "checks strict equivalence on positive and boundary-negative hosts: %s",
     (pattern) => {

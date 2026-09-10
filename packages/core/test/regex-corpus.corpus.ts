@@ -21,6 +21,7 @@ const WORKER_COUNT = readPositiveInt(
   process.env.REGEX_CORPUS_WORKERS,
   Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 8) - 1)
 );
+const CASE_TIMEOUT_MS = readPositiveInt(process.env.REGEX_CORPUS_CASE_TIMEOUT_MS, 10_000);
 const VALID_LIST_FILE_NAME = /^[a-z0-9!-]+$/;
 
 interface AuditCase {
@@ -46,6 +47,8 @@ interface AuditResult {
 interface WorkerSlot {
   worker: Worker;
   busy: boolean;
+  taskId: number | null;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
 interface QueueItem {
@@ -78,7 +81,7 @@ async function createAuditContext(): Promise<{ cases: AuditCase[]; directory: st
   console.info("Corpus inputs:", JSON.stringify({
     dlcDataDir: DLC_DATA_DIR, dlcSha256, trancoCsv: TRANCO_CSV, trancoSha256,
     trancoLimit: TRANCO_LIMIT, domains: corpus.length, regexes: regexEntries.length,
-    overmatchLimit: OVERMATCH_LIMIT, overmatchFactor: OVERMATCH_FACTOR
+    overmatchLimit: OVERMATCH_LIMIT, overmatchFactor: OVERMATCH_FACTOR, caseTimeoutMs: CASE_TIMEOUT_MS
   }));
 
   return {
@@ -108,46 +111,59 @@ class AuditWorkerPool {
   private readonly queue: QueueItem[] = [];
   private readonly pending = new Map<number, QueueItem>();
   private nextId = 1;
+  private closed = false;
 
-  constructor(size: number, corpusPath: string) {
-    const workerUrl = new URL("./regex-corpus.worker.mjs", import.meta.url);
-    this.slots = Array.from({ length: size }, () => {
-      const worker = new Worker(workerUrl, {
-        workerData: {
-          corpusPath,
-          overmatchFactor: OVERMATCH_FACTOR,
-          overmatchLimit: OVERMATCH_LIMIT
-        }
-      });
-      const slot: WorkerSlot = { worker, busy: false };
+  constructor(size: number, private readonly corpusPath: string) {
+    this.slots = Array.from({ length: size }, (_, index) => this.createSlot(index));
+  }
 
-      worker.on("message", (message: { id: number; result?: AuditResult; error?: string }) => {
-        const item = this.pending.get(message.id);
-        this.pending.delete(message.id);
-        slot.busy = false;
-
-        if (item) {
-          if (message.error) {
-            item.reject(new Error(message.error));
-          } else {
-            if (message.result) item.resolve(message.result);
-            else item.reject(new Error("Corpus worker returned no result"));
-          }
-        }
-
-        this.dispatch();
-      });
-
-      worker.on("error", (error) => {
-        slot.busy = false;
-        for (const item of this.pending.values()) {
-          item.reject(error instanceof Error ? error : new Error(String(error)));
-        }
-        this.pending.clear();
-      });
-
-      return slot;
+  private createSlot(index: number): WorkerSlot {
+    const worker = new Worker(new URL("./regex-corpus.worker.mjs", import.meta.url), {
+      workerData: {
+        corpusPath: this.corpusPath,
+        overmatchFactor: OVERMATCH_FACTOR,
+        overmatchLimit: OVERMATCH_LIMIT
+      }
     });
+    const slot: WorkerSlot = { worker, busy: false, taskId: null, timer: null };
+    worker.on("message", (message: { id: number; result?: AuditResult; error?: string }) => {
+      if (this.slots[index] !== slot || slot.taskId !== message.id) return;
+      const item = this.pending.get(message.id);
+      this.pending.delete(message.id);
+      this.releaseSlot(slot);
+      if (message.error) item?.reject(new Error(message.error));
+      else if (message.result) item?.resolve(message.result);
+      else item?.reject(new Error("Corpus worker returned no result"));
+      this.dispatch();
+    });
+    worker.on("error", (error) => this.replaceSlot(index, slot, error instanceof Error ? error : new Error(String(error))));
+    worker.on("exit", (code) => {
+      if (!this.closed && this.slots[index] === slot) {
+        this.replaceSlot(index, slot, new Error(`Corpus worker exited unexpectedly: ${code}`));
+      }
+    });
+    return slot;
+  }
+
+  private releaseSlot(slot: WorkerSlot): void {
+    if (slot.timer) clearTimeout(slot.timer);
+    slot.timer = null;
+    slot.taskId = null;
+    slot.busy = false;
+  }
+
+  private replaceSlot(index: number, slot: WorkerSlot, error: Error): void {
+    if (this.closed || this.slots[index] !== slot) return;
+    if (slot.taskId !== null) {
+      this.pending.get(slot.taskId)?.reject(error);
+      this.pending.delete(slot.taskId);
+    }
+    this.releaseSlot(slot);
+    // A wall-clock timeout must terminate the thread: its regex may be stuck in
+    // synchronous backtracking and unable to respond to a cancellation message.
+    this.slots[index] = this.createSlot(index);
+    void slot.worker.terminate();
+    this.dispatch();
   }
 
   run(auditCase: AuditCase): Promise<AuditResult> {
@@ -158,47 +174,61 @@ class AuditWorkerPool {
   }
 
   async close(): Promise<void> {
+    this.closed = true;
+    for (const slot of this.slots) this.releaseSlot(slot);
     await Promise.all(this.slots.map((slot) => slot.worker.terminate()));
   }
 
   private dispatch(): void {
-    for (const slot of this.slots) {
-      if (slot.busy) {
-        continue;
-      }
-
+    if (this.closed) return;
+    this.slots.forEach((slot, index) => {
+      if (slot.busy) return;
       const item = this.queue.shift();
-      if (!item) {
-        return;
-      }
-
-      const id = this.nextId;
-      this.nextId += 1;
+      if (!item) return;
+      const id = this.nextId++;
       slot.busy = true;
+      slot.taskId = id;
       this.pending.set(id, item);
+      slot.timer = setTimeout(() => this.replaceSlot(index, slot, new Error(
+        `Corpus case timed out after ${CASE_TIMEOUT_MS}ms: ${item.auditCase.name}`
+      )), CASE_TIMEOUT_MS);
       slot.worker.postMessage({ id, auditCase: item.auditCase });
-    }
+    });
   }
 }
 
 const auditContext = await createAuditContext();
 const workerPool = new AuditWorkerPool(WORKER_COUNT, auditContext.corpusPath);
 const totals = Object.fromEntries(MODES.map((mode) => [mode, {
-  expected: 0, actual: 0, overmatches: 0, omissions: 0, oracleUnavailable: 0
-}])) as Record<RegexMode, AuditResult["counts"]>;
+  expected: 0, actual: 0, overmatches: 0, omissions: 0, oracleUnavailable: 0,
+  unsupportedPatterns: 0, failedCases: 0
+}])) as Record<RegexMode, AuditResult["counts"] & { unsupportedPatterns: number; failedCases: number }>;
 
 afterAll(async () => {
   await workerPool.close();
   await rm(auditContext.directory, { recursive: true, force: true });
-  console.info("Corpus match counts (rule/domain pairs):", JSON.stringify(totals));
+  console.info("Corpus emitted-rule match counts (rule/domain pairs):", JSON.stringify(totals));
 });
 
 describe("regex conversion corpus audit", () => {
   test.concurrent.each(auditContext.cases)("$name", async (auditCase) => {
-    const result = await workerPool.run(auditCase);
+    const total = totals[auditCase.mode];
+    if (auditCase.rules.length === 0) {
+      total.unsupportedPatterns += 1;
+      if (auditCase.referencePattern === null) total.oracleUnavailable += 1;
+      return;
+    }
+    let result: AuditResult;
+    try {
+      result = await workerPool.run(auditCase);
+    } catch (error) {
+      total.failedCases += 1;
+      throw error;
+    }
     for (const key of Object.keys(result.counts) as Array<keyof AuditResult["counts"]>) {
       totals[auditCase.mode][key] += result.counts[key];
     }
+    if (result.failures.length > 0) total.failedCases += 1;
     expect(result.failures).toEqual([]);
   });
 });
