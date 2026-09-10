@@ -17,7 +17,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 - `fetch`:
   - Route `/geosite*` requests to API handlers.
   - API handlers read latest state from R2.
-  - Serve prebuilt artifact from `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt` when available.
+  - Serve prebuilt artifact from `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt` when available.
   - On miss, compile on-demand from snapshot and cache artifact.
   - Unknown filters are served as empty output but are not persisted as artifacts.
   - If previous cache artifact exists, return stale artifact immediately and refresh latest artifact in background (`waitUntil`).
@@ -28,7 +28,9 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 - `state/latest.json`
 - `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
-- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
+- `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`
+
+Increment `CONVERTER_VERSION` when conversion semantics change.
 
 Retention:
 

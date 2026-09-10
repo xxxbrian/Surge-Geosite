@@ -553,7 +553,7 @@ describe("worker fetch routes", () => {
     expect(body).toContain("DOMAIN-SUFFIX,google.com");
     expect(body).not.toContain("mail.google.com");
 
-    const cached = await bucket.get("artifacts/etag-fetch-v1/balanced/google.txt");
+    const cached = await bucket.get("artifacts/v2/etag-fetch-v1/balanced/google.txt");
     expect(cached).not.toBeNull();
 
     await ctx.drain();
@@ -684,7 +684,7 @@ describe("worker fetch routes", () => {
       google: []
     });
 
-    await bucket.put("artifacts/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
+    await bucket.put("artifacts/v2/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
 
     const ctx = new TestContext();
     const worker = createWorker();
@@ -696,7 +696,7 @@ describe("worker fetch routes", () => {
 
     await ctx.drain();
 
-    const refreshed = await bucket.get("artifacts/etag-stale-v2/balanced/google.txt");
+    const refreshed = await bucket.get("artifacts/v2/etag-stale-v2/balanced/google.txt");
     expect(refreshed).not.toBeNull();
     expect(await refreshed!.text()).toContain("DOMAIN-SUFFIX,google.com");
   });
@@ -730,7 +730,7 @@ describe("worker fetch routes", () => {
     await bucket.putJson("snapshots/etag-del-v2/index/geosite.json", {
       github: []
     });
-    await bucket.put("artifacts/etag-del-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
+    await bucket.put("artifacts/v2/etag-del-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
 
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
@@ -764,7 +764,7 @@ describe("worker fetch routes", () => {
         github: "domain:github.com\n"
       })
     );
-    await bucket.put("artifacts/etag-noindex-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
+    await bucket.put("artifacts/v2/etag-noindex-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
 
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
@@ -851,7 +851,7 @@ describe("worker fetch routes", () => {
     const unknownFilter = await worker.fetch(new Request("https://example.com/geosite/google@us"), env, ctx);
     expect(unknownFilter.status).toBe(200);
     expect(await unknownFilter.text()).toBe("");
-    expect(await bucket.get("artifacts/etag-filter-v1/balanced/google@us.txt")).toBeNull();
+    expect(await bucket.get("artifacts/v2/etag-filter-v1/balanced/google@us.txt")).toBeNull();
 
     const knownFilter = await worker.fetch(new Request("https://example.com/geosite/google@cn"), env, ctx);
     expect(knownFilter.status).toBe(200);
@@ -1073,6 +1073,32 @@ describe("worker fetch routes", () => {
     const fresh = await worker.fetch(url, env, new TestContext());
     expect(await fresh.text()).toBe("body-v2");
     expect(fresh.headers.get("etag")).toBe('"v2"');
+  });
+
+  test("recompiles rules after converter upgrades and rejects legacy cache validators", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    await bucket.putJson("state/latest.json", makeLatestState("converter-upgrade", { previousCacheKey: "converter-old" }));
+    await bucket.put("snapshots/converter-upgrade/sources.json", makeSnapshotPayload("converter-upgrade", {
+      google: "domain:current.example\n"
+    }));
+    await bucket.putJson("snapshots/converter-upgrade/index/geosite.json", { google: [] });
+    await bucket.put("artifacts/converter-upgrade/balanced/google.txt", "DOMAIN,legacy-wrong.example\n");
+    await bucket.put("artifacts/converter-old/balanced/google.txt", "DOMAIN,legacy-stale.example\n");
+    const worker = createWorker();
+    const request = new Request("https://example.com/geosite/google", {
+      headers: { "if-none-match": '"converter-upgrade:balanced:google"' }
+    });
+    const response = await worker.fetch(request, env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("DOMAIN-SUFFIX,current.example\n");
+    expect(response.headers.get("x-stale")).toBeNull();
+    expect(response.headers.get("etag")).toBe('"geosite-rules-v2:converter-upgrade:balanced:google"');
+    expect(await bucket.get("artifacts/v2/converter-upgrade/balanced/google.txt")).not.toBeNull();
+    const conditional = await worker.fetch(new Request(request.url, {
+      headers: { "if-none-match": response.headers.get("etag")! }
+    }), env, new TestContext());
+    expect(conditional.status).toBe(304);
   });
 
   test("returns stale geosite-srs cache when upstream refresh fails", async () => {

@@ -18,6 +18,8 @@ const DEFAULT_MRS_UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/MetaCub
 const DEFAULT_MRS_UPSTREAM_USER_AGENT = "surge-geosite-worker/2";
 const DEFAULT_MRS_CACHE_TTL_SECONDS = 86400;
 const LATEST_STATE_KEY = "state/latest.json";
+// Bump whenever parsing, resolution, or rule emission semantics change.
+const CONVERTER_VERSION = 2;
 const GEOSITE_INDEX_SCHEMA_VERSION = 2;
 const SNAPSHOT_CACHE_LIMIT = 2;
 const RESOLVED_CACHE_LIMIT = 2;
@@ -840,7 +842,7 @@ function buildIndexEtag(upstreamEtag: string): string {
 }
 
 function buildRulesEtag(upstreamEtag: string, mode: RegexMode, name: string, filter: string | null): string {
-  return `"${upstreamEtag}:${mode}:${name.toLowerCase()}${filter ? `@${filter}` : ""}"`;
+  return `"geosite-rules-v${CONVERTER_VERSION}:${upstreamEtag}:${mode}:${name.toLowerCase()}${filter ? `@${filter}` : ""}"`;
 }
 
 function matchesIfNoneMatch(ifNoneMatch: string | null, etag: string): boolean {
@@ -874,7 +876,7 @@ async function ensureArtifactForLatest(
   name: string,
   filter: string | null
 ): Promise<ArtifactBuildResult> {
-  const lockKey = `${latest.upstream.cacheKey}:${mode}:${artifactName(name, filter)}`;
+  const lockKey = artifactKey(latest.upstream.cacheKey, mode, name, filter);
   const existingLock = artifactBuildLocks.get(lockKey);
   if (existingLock) {
     return existingLock;
@@ -1160,7 +1162,7 @@ function artifactName(name: string, filter: string | null): string {
 }
 
 function artifactKey(etag: string, mode: RegexMode, name: string, filter: string | null): string {
-  return `artifacts/${etag}/${mode}/${artifactName(name, filter)}.txt`;
+  return `artifacts/v${CONVERTER_VERSION}/${etag}/${mode}/${artifactName(name, filter)}.txt`;
 }
 
 function snapshotSourceKey(etag: string): string {

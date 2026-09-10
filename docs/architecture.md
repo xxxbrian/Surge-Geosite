@@ -33,7 +33,7 @@ Recommended route priority:
 ## Serve Pipeline
 
 1. Read `state/latest.json`.
-2. Try `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`.
+2. Try `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`.
 3. If hit: return immediately.
 4. If miss:
    - Optionally return stale artifact from previous cache key (non-filter path), then rebuild latest in background.
@@ -61,7 +61,7 @@ Recommended route priority:
 - `state/latest.json`
 - `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
-- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
+- `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`
 
 ## Operations
 
