@@ -138,7 +138,7 @@ interface ArtifactBuildResult {
 }
 
 interface RemoteBinaryCacheMeta {
-  version: 1;
+  version: 2;
   sourceEtag: string | null;
   responseEtag: string;
   fetchedAt: string;
@@ -675,20 +675,18 @@ async function readThroughRemoteBinaryCache(
   const blobKey = remoteBlobKey(options.namespace, options.cacheKey);
   const metaKey = remoteMetaKey(options.namespace, options.cacheKey);
 
-  const [cachedObject, cachedMetaRaw] = await Promise.all([
-    env.GEOSITE_BUCKET.get(blobKey),
-    readJson<RemoteBinaryCacheMeta>(env.GEOSITE_BUCKET, metaKey)
-  ]);
-
+  const cachedObject = await env.GEOSITE_BUCKET.get(blobKey);
   const cachedBody = cachedObject ? new Uint8Array(await cachedObject.arrayBuffer()) : null;
   const cachedMeta = await normalizeRemoteBinaryCacheMeta(
-    cachedMetaRaw,
+    cachedObject?.customMetadata?.geositeCache,
     options.namespace,
     options.cacheKey,
     cachedBody,
     options.fallbackContentType
   );
-  const cached = cachedBody && cachedMeta ? { body: cachedBody, meta: cachedMeta } : null;
+  const cached = cachedBody && cachedMeta && cachedObject
+    ? { body: cachedBody, meta: cachedMeta, objectEtag: cachedObject.etag }
+    : null;
 
   const nowMs = options.now();
   const ttlMs = options.ttlSeconds * 1000;
@@ -723,7 +721,7 @@ async function readThroughRemoteBinaryCache(
 async function ensureRemoteBinaryRevalidated(
   env: WorkerEnv,
   options: ReadThroughRemoteBinaryOptions,
-  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta } | null,
+  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta; objectEtag: string } | null,
   blobKey: string,
   metaKey: string
 ): Promise<ReadThroughRemoteBinaryResult> {
@@ -750,7 +748,7 @@ async function ensureRemoteBinaryRevalidated(
 async function revalidateRemoteBinaryFromUpstream(
   env: WorkerEnv,
   options: ReadThroughRemoteBinaryOptions,
-  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta } | null,
+  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta; objectEtag: string } | null,
   blobKey: string,
   metaKey: string
 ): Promise<ReadThroughRemoteBinaryResult> {
@@ -768,12 +766,12 @@ async function revalidateRemoteBinaryFromUpstream(
       headers: requestHeaders
     });
 
-    if (upstreamResponse.status === 304 && cached) {
+    if (upstreamResponse.status === 304 && cached?.meta.sourceEtag) {
       const refreshedMeta: RemoteBinaryCacheMeta = {
         ...cached.meta,
         fetchedAt: nowIso
       };
-      await writeJson(env.GEOSITE_BUCKET, metaKey, refreshedMeta);
+      await writeRemoteBinary(env.GEOSITE_BUCKET, blobKey, cached.body, refreshedMeta, cached.objectEtag);
       return remoteBinaryFound({
         body: cached.body,
         responseEtag: refreshedMeta.responseEtag,
@@ -807,20 +805,14 @@ async function revalidateRemoteBinaryFromUpstream(
     const responseEtag = await buildRemoteBinaryEtag(options.namespace, options.cacheKey, sourceEtag, body);
 
     const nextMeta: RemoteBinaryCacheMeta = {
-      version: 1,
+      version: 2,
       sourceEtag,
       responseEtag,
       fetchedAt: nowIso,
       contentType
     };
 
-    await Promise.all([
-      writeBinary(env.GEOSITE_BUCKET, blobKey, body, {
-        contentType,
-        cacheControl: "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
-      }),
-      writeJson(env.GEOSITE_BUCKET, metaKey, nextMeta)
-    ]);
+    await writeRemoteBinary(env.GEOSITE_BUCKET, blobKey, body, nextMeta, cached?.objectEtag ?? null);
 
     return remoteBinaryFound({
       body,
@@ -1188,22 +1180,27 @@ function remoteMetaKey(namespace: string, cacheKey: string): string {
 }
 
 async function normalizeRemoteBinaryCacheMeta(
-  input: RemoteBinaryCacheMeta | null,
+  serialized: string | undefined,
   namespace: string,
   cacheKey: string,
   cachedBody: Uint8Array | null,
   fallbackContentType: string
 ): Promise<RemoteBinaryCacheMeta | null> {
+  let input: unknown;
+  try {
+    input = serialized ? JSON.parse(serialized) : null;
+  } catch {
+    input = null;
+  }
   if (
-    input &&
-    typeof input === "object" &&
-    input.version === 1 &&
+    isObjectRecord(input) &&
+    input.version === 2 &&
     typeof input.fetchedAt === "string" &&
     typeof input.responseEtag === "string" &&
     typeof input.contentType === "string"
   ) {
     return {
-      version: 1,
+      version: 2,
       sourceEtag: typeof input.sourceEtag === "string" ? input.sourceEtag : null,
       responseEtag: input.responseEtag,
       fetchedAt: input.fetchedAt,
@@ -1215,8 +1212,10 @@ async function normalizeRemoteBinaryCacheMeta(
     return null;
   }
 
+  // The old sidecar may describe different bytes. Serve only a content-derived
+  // identity and re-fetch unconditionally before promoting this legacy object.
   return {
-    version: 1,
+    version: 2,
     sourceEtag: null,
     responseEtag: await buildRemoteBinaryEtag(namespace, cacheKey, null, cachedBody),
     fetchedAt: new Date(0).toISOString(),
@@ -1352,21 +1351,22 @@ async function writeJson(
   });
 }
 
-async function writeBinary(
+async function writeRemoteBinary(
   bucket: R2BucketLike,
   key: string,
-  value: Uint8Array,
-  options: { contentType: string; cacheControl?: string }
+  body: Uint8Array,
+  meta: RemoteBinaryCacheMeta,
+  expectedEtag: string | null
 ): Promise<void> {
-  const metadata: NonNullable<R2PutOptionsLike["httpMetadata"]> = {
-    contentType: options.contentType
-  };
-  if (options.cacheControl) {
-    metadata.cacheControl = options.cacheControl;
-  }
-
-  await bucket.put(key, value, {
-    httpMetadata: metadata
+  // Bytes and their identity become visible in one R2 write. A delayed 304 or
+  // download must not replace a newer object published by another isolate.
+  await bucket.put(key, body, {
+    httpMetadata: {
+      contentType: meta.contentType,
+      cacheControl: "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
+    },
+    customMetadata: { geositeCache: JSON.stringify(meta) },
+    onlyIf: expectedEtag === null ? { etagDoesNotMatch: "*" } : { etagMatches: expectedEtag }
   });
 }
 

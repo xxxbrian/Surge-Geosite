@@ -936,6 +936,145 @@ describe("worker fetch routes", () => {
     expect(calls).toBe(1);
   });
 
+  test("keeps binary bytes and metadata together when an atomic replacement fails", async () => {
+    class FailingBucket extends MemoryR2Bucket {
+      fail = false;
+      override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+        if (this.fail && key.includes("/blob/")) throw new Error("injected R2 write failure");
+        return super.put(key, value, options);
+      }
+    }
+    const bucket = new FailingBucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    const conditionalHeaders: Array<string | null> = [];
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      conditionalHeaders.push(new Headers(init?.headers).get("if-none-match"));
+      calls += 1;
+      return new Response(calls === 1 ? "body-v1" : "body-v2", { headers: { etag: calls === 1 ? "v1" : "v2" } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/atomic");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    bucket.fail = true;
+    const failedCtx = new TestContext();
+    const failed = await worker.fetch(url, env, failedCtx);
+    expect(await failed.text()).toBe("body-v1");
+    await failedCtx.drain();
+    const object = await bucket.get("remote-cache/geosite-srs/blob/geosite-atomic.srs");
+    expect(await object!.text()).toBe("body-v1");
+    expect(JSON.parse(object!.customMetadata!.geositeCache!)).toMatchObject({ version: 2, sourceEtag: "v1" });
+    bucket.fail = false;
+    const retryCtx = new TestContext();
+    await worker.fetch(url, env, retryCtx);
+    await retryCtx.drain();
+    expect(conditionalHeaders).toEqual([null, "v1", "v1"]);
+    const repaired = await worker.fetch(url, env, new TestContext());
+    expect(await repaired.text()).toBe("body-v2");
+    expect(repaired.headers.get("etag")).toContain(":v2");
+    expect(repaired.headers.get("x-stale")).toBeNull();
+  });
+
+  test("readers see matching binary metadata on either side of a pending write", async () => {
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    class InterleavedBucket extends MemoryR2Bucket {
+      armed = false;
+      override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+        if (this.armed && key.includes("/blob/")) {
+          this.armed = false;
+          entered.resolve();
+          await release.promise;
+        }
+        return super.put(key, value, options);
+      }
+    }
+    const bucket = new InterleavedBucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async () => {
+      calls += 1;
+      return new Response(`body-v${calls}`, { headers: { etag: `v${calls}` } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/interleaved");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    bucket.armed = true;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await entered.promise;
+    const duringCtx = new TestContext();
+    const during = await worker.fetch(url, env, duringCtx);
+    expect(await during.text()).toBe("body-v1");
+    expect(during.headers.get("etag")).toContain(":v1");
+    release.resolve();
+    await Promise.all([ctx.drain(), duringCtx.drain()]);
+    const after = await worker.fetch(url, env, new TestContext());
+    expect(await after.text()).toBe("body-v2");
+    expect(after.headers.get("etag")).toContain(":v2");
+  });
+
+  test("ignores mismatched legacy binary sidecars and re-fetches without their validators", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    const key = "remote-cache/geosite-srs/blob/geosite-legacy.srs";
+    await bucket.put(key, "legacy-body-v1");
+    await bucket.putJson("remote-cache/geosite-srs/meta/geosite-legacy.srs.json", {
+      version: 1, sourceEtag: "v2", responseEtag: '"incorrect-v2"',
+      fetchedAt: "2026-02-15T00:00:00Z", contentType: "application/octet-stream"
+    });
+    const worker = createWorker({ now: () => Date.parse("2026-02-15T00:00:00Z"), fetchImpl: async (_input, init) => {
+      expect(new Headers(init?.headers).has("if-none-match")).toBe(false);
+      return new Response("body-v2", { headers: { etag: "v2" } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/legacy");
+    const ctx = new TestContext();
+    const stale = await worker.fetch(url, env, ctx);
+    expect(await stale.text()).toBe("legacy-body-v1");
+    expect(stale.headers.get("etag")).toContain(createHash("sha256").update("legacy-body-v1").digest("hex"));
+    expect(stale.headers.has("x-upstream-etag")).toBe(false);
+    expect(stale.headers.get("x-stale")).toBe("1");
+    await ctx.drain();
+    const fresh = await worker.fetch(url, env, new TestContext());
+    expect(await fresh.text()).toBe("body-v2");
+    expect(fresh.headers.get("etag")).toContain(":v2");
+  });
+
+  test("a delayed binary 304 cannot overwrite a concurrently published body", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      if (++calls === 1) return new Response("body-v1", { headers: { etag: "v1" } });
+      expect(new Headers(init?.headers).get("if-none-match")).toBe("v1");
+      entered.resolve();
+      await release.promise;
+      return new Response(null, { status: 304 });
+    } });
+    const url = new Request("https://example.com/geosite-srs/late304");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await entered.promise;
+    await bucket.put("remote-cache/geosite-srs/blob/geosite-late304.srs", "body-v2", {
+      customMetadata: { geositeCache: JSON.stringify({
+        version: 2, sourceEtag: "v2", responseEtag: '"v2"',
+        fetchedAt: new Date(now).toISOString(), contentType: "application/octet-stream"
+      }) }
+    });
+    release.resolve();
+    await ctx.drain();
+    const fresh = await worker.fetch(url, env, new TestContext());
+    expect(await fresh.text()).toBe("body-v2");
+    expect(fresh.headers.get("etag")).toBe('"v2"');
+  });
+
   test("returns stale geosite-srs cache when upstream refresh fails", async () => {
     const bucket = new MemoryR2Bucket();
     const env: WorkerEnv = {
