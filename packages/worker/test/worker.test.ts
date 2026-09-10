@@ -200,6 +200,8 @@ describe("refreshGeositeRun", () => {
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
 
     await bucket.putJson("state/latest.json", makeLatestState("etag-unchanged-v1"));
+    await bucket.put("snapshots/etag-unchanged-v1/sources.json", makeSnapshotPayload("etag-unchanged-v1", { google: "domain:google.com" }));
+    await bucket.putJson("snapshots/etag-unchanged-v1/index/geosite.json", { google: [] });
 
     const calls: string[] = [];
     const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -287,6 +289,8 @@ describe("refreshGeositeRun", () => {
       const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
       if (scenario !== "initialization") {
         await bucket.putJson("state/latest.json", makeLatestState("cas-v1"));
+        await bucket.put("snapshots/cas-v1/sources.json", makeSnapshotPayload("cas-v1", { google: "domain:google.com" }));
+        await bucket.putJson("snapshots/cas-v1/index/geosite.json", { google: [] });
       }
       const slowEtag = scenario.endsWith("unchanged") ? "cas-v1" : "cas-v2";
       const slowFetch: typeof fetch = async (_input, init) => {
@@ -312,6 +316,31 @@ describe("refreshGeositeRun", () => {
       expect(latest.previousCacheKey).toBe(scenario === "initialization" ? null : "cas-v1");
     }
   );
+
+  test.each(["source", "index", "both"] as const)("repairs missing %s objects even when upstream etag is unchanged", async (missing) => {
+    const bucket = new MemoryR2Bucket();
+    const key = `repair-${missing}`;
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    await bucket.putJson("state/latest.json", makeLatestState(key, { previousCacheKey: "retained-previous" }));
+    if (missing !== "source" && missing !== "both") {
+      await bucket.put(`snapshots/${key}/sources.json`, makeSnapshotPayload(key, { google: "domain:google.com" }));
+    }
+    if (missing !== "index" && missing !== "both") {
+      await bucket.putJson(`snapshots/${key}/index/geosite.json`, { google: [] });
+    }
+    const methods: string[] = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      methods.push(init?.method ?? "GET");
+      return new Response(init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com:@cn"] }), {
+        headers: { etag: key }
+      });
+    };
+    expect(await refreshGeositeRun(env, { fetchImpl })).toMatchObject({ updated: true, reason: "snapshot-repaired" });
+    expect(methods).toEqual(["HEAD", "GET"]);
+    expect(await bucket.get(`snapshots/${key}/sources.json`)).not.toBeNull();
+    expect(JSON.parse(await (await bucket.get(`snapshots/${key}/index/geosite.json`))!.text())).toEqual({ google: ["cn"] });
+    expect(JSON.parse(await (await bucket.get("state/latest.json"))!.text()).previousCacheKey).toBe("retained-previous");
+  });
 
   test("refuses to publish invalid snapshot payload", async () => {
     const bucket = new MemoryR2Bucket();
@@ -864,6 +893,38 @@ describe("worker fetch routes", () => {
     expect(JSON.parse(await indexRaw!.text())).toEqual({
       google: ["cn"]
     });
+  });
+
+  test.each(["/geosite", "/geosite/google"])("repairs dangling snapshots on a cold request to %s", async (route) => {
+    const bucket = new MemoryR2Bucket();
+    const key = route === "/geosite" ? "request-repair-index" : "request-repair-rule";
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    await bucket.putJson("state/latest.json", makeLatestState(key));
+    let calls = 0;
+    const worker = createWorker({ fetchImpl: async (_input, init) => {
+      calls += 1;
+      return new Response(init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com"] }), { headers: { etag: key } });
+    } });
+    const response = await worker.fetch(new Request(`https://example.com${route}`), env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(await bucket.get(`snapshots/${key}/sources.json`)).not.toBeNull();
+    expect(await bucket.get(`snapshots/${key}/index/geosite.json`)).not.toBeNull();
+  });
+
+  test("hot artifact requests do not probe or download snapshot objects", async () => {
+    class CountingBucket extends MemoryR2Bucket {
+      reads: string[] = [];
+      override async head(key: string) { this.reads.push(`HEAD ${key}`); return super.head(key); }
+      override async get(key: string) { this.reads.push(`GET ${key}`); return super.get(key); }
+    }
+    const bucket = new CountingBucket();
+    await bucket.putJson("state/latest.json", makeLatestState("hot-artifact"));
+    await bucket.put("artifacts/v2/hot-artifact/balanced/google.txt", "DOMAIN-SUFFIX,google.com\n");
+    const worker = createWorker({ fetchImpl: async () => { throw new Error("unexpected upstream fetch"); } });
+    const response = await worker.fetch(new Request("https://example.com/geosite/google"), { GEOSITE_BUCKET: bucket }, new TestContext());
+    expect(response.status).toBe(200);
+    expect(bucket.reads).toEqual(["GET state/latest.json", "GET artifacts/v2/hot-artifact/balanced/google.txt"]);
   });
 
   test("recovers from transient snapshot parse failure without poisoned cache", async () => {

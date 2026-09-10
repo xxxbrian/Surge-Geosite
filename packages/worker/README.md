@@ -12,7 +12,7 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 
 - `scheduled`:
   - HEAD upstream YAML release asset to check ETag, falling back to GET when HEAD has no usable ETag.
-  - If ETag unchanged: update check timestamp only.
+  - If ETag is unchanged: update the check timestamp only when the snapshot and index exist; rebuild missing data.
   - If ETag changed: download `dlc.dat_plain.yml`, normalize rules, resolve lists, write snapshot + compact filter index to R2, then update `state/latest.json`.
 - `fetch`:
   - Route `/geosite*` requests to API handlers.
@@ -34,8 +34,7 @@ Increment `CONVERTER_VERSION` when conversion semantics change.
 
 Retention:
 
-- Configure R2 Lifecycle rules for `snapshots/` and `artifacts/` prefixes in Cloudflare dashboard.
-- Recommended: keep a short retention window (for example 7-30 days) based on your traffic and rollback needs.
+- Preserve snapshots referenced by the current and previous cache keys; only artifacts may expire solely by age.
 
 ## Wrangler
 

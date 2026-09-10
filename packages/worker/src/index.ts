@@ -127,7 +127,7 @@ type GeositeIndex = Record<string, string[]>;
 
 interface RefreshResult {
   updated: boolean;
-  reason: "etag-unchanged" | "etag-updated" | "superseded";
+  reason: "etag-unchanged" | "etag-updated" | "snapshot-repaired" | "superseded";
   checkedAt: string;
   etag: string;
   listCount: number;
@@ -182,7 +182,16 @@ export function createWorker(deps: WorkerDeps = {}): {
 
   return {
     async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
-      const response = await handleFetch(request, env, ctx, { now, fetchImpl });
+      let response: Response;
+      try {
+        response = await handleFetch(request, env, ctx, { now, fetchImpl });
+      } catch (error) {
+        if (!(error instanceof SnapshotUnavailableError)) throw error;
+        // Repair only after an actual cache miss, then retry once. Hot artifact
+        // requests never load the full snapshot or probe both snapshot objects.
+        await ensureGeositeRefresh(env, { now, fetchImpl });
+        response = await handleFetch(request, env, ctx, { now, fetchImpl });
+      }
       const tagged = withGeositeRobotsTag(request, response);
       return withoutBodyForHead(request, tagged);
     },
@@ -230,9 +239,12 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   const currentObject = await env.GEOSITE_BUCKET.get(LATEST_STATE_KEY);
   const current = currentObject ? JSON.parse(await currentObject.text()) as LatestState : null;
   const expectedEtag = currentObject?.etag ?? null;
+  // Cron checks metadata only: lifecycle deletion must not be hidden by a
+  // stable upstream ETag or by an isolate's in-memory snapshot cache.
+  const currentSnapshotReady = current ? await hasSnapshotObjects(env.GEOSITE_BUCKET, current) : false;
 
   const observedHeadEtag = await checkUpstreamYamlEtag(yamlUrl, userAgent, fetchImpl);
-  if (observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
+  if (currentSnapshotReady && observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
@@ -254,7 +266,7 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   const computedEtag = downloadedEtag ?? observedHeadEtag ?? (await sha256Hex(yamlBytes));
   const cacheKey = safeCacheKey(computedEtag);
 
-  if (current?.upstream.yamlUrl === yamlUrl && current.upstream.cacheKey === cacheKey) {
+  if (currentSnapshotReady && current?.upstream.yamlUrl === yamlUrl && current.upstream.cacheKey === cacheKey) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
@@ -303,12 +315,15 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
       listCount,
       generatedAt
     },
-    previousCacheKey: current?.upstream.cacheKey ?? null,
+    previousCacheKey: current?.upstream.cacheKey === cacheKey
+      ? current.previousCacheKey
+      : current?.upstream.cacheKey ?? null,
     checkedAt
   };
 
   const result = await publishLatestState(env.GEOSITE_BUCKET, nextState, expectedEtag, true);
   if (result.updated) {
+    if (current?.upstream.cacheKey === cacheKey) result.reason = "snapshot-repaired";
     snapshotCache.clear();
     resolvedCache.clear();
   }
@@ -973,7 +988,7 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
   const pending = (async () => {
     const payload = await readJson<SnapshotPayload>(env.GEOSITE_BUCKET, latest.snapshot.sourceKey);
     if (!payload) {
-      throw new Error(`snapshot not found: ${latest.snapshot.sourceKey}`);
+      throw new SnapshotUnavailableError(`snapshot not found: ${latest.snapshot.sourceKey}`);
     }
 
     return payload;
@@ -985,6 +1000,16 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
     snapshotCache.delete(cacheKey);
     throw error;
   });
+}
+
+class SnapshotUnavailableError extends Error {}
+
+async function hasSnapshotObjects(bucket: R2BucketLike, latest: LatestState): Promise<boolean> {
+  const [source, index] = await Promise.all([
+    bucket.head(latest.snapshot.sourceKey),
+    bucket.head(latest.snapshot.indexKey)
+  ]);
+  return source !== null && index !== null;
 }
 
 async function ensureLatestState(env: WorkerEnv): Promise<LatestState | null> {

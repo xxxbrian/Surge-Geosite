@@ -22,7 +22,7 @@ Recommended route priority:
 
 1. Cron runs every 5 minutes.
 2. Worker sends `HEAD` to the upstream YAML release asset (`dlc.dat_plain.yml`).
-3. If ETag unchanged: only update check timestamp.
+3. If ETag is unchanged: only update the check timestamp when the snapshot and index exist; rebuild missing data.
 4. If ETag changed:
    - Download YAML once.
    - Normalize YAML rules into source text.
@@ -65,5 +65,5 @@ Recommended route priority:
 
 ## Operations
 
-- Keep lifecycle policies for `snapshots/` and `artifacts/` (for example 7-30 days).
+- Preserve snapshots referenced by the current and previous cache keys; only artifacts may expire solely by age.
 - CLI (`packages/cli`) is for local debug/verification, not required in production serving path.
