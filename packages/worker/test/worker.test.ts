@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   createWorker,
@@ -12,6 +12,8 @@ import {
   type R2PutOptionsLike,
   type WorkerEnv
 } from "../src/index.js";
+
+afterEach(() => vi.restoreAllMocks());
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -949,7 +951,9 @@ describe("worker fetch routes", () => {
     await bucket.put("snapshots/etag-poison-v1/sources.json", strToU8("not-gzip"));
 
     const worker = createWorker();
-    await expect(worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext())).rejects.toThrow();
+    const unavailable = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.headers.get("retry-after")).toBe("30");
 
     await bucket.put(
       "snapshots/etag-poison-v1/sources.json",
@@ -1384,6 +1388,73 @@ describe("worker fetch routes", () => {
     expect(calls).toBe(1);
 
     expect(await bucket.get("remote-cache/geosite-mrs/blob/adblock.mrs")).not.toBeNull();
+  });
+
+  test("logs upstream failures and returns a retryable cold binary 503", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const worker = createWorker({ fetchImpl: async () => new Response("upstream rejected", { status: 502 }) });
+    const response = await worker.fetch(new Request("https://example.com/geosite-srs/failure"), {
+      GEOSITE_BUCKET: new MemoryR2Bucket()
+    }, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await response.text()).toBe("geosite temporarily unavailable");
+    const entries = logs.mock.calls.map(([message]) => JSON.parse(String(message)));
+    expect(entries).toContainEqual(expect.objectContaining({ event: "binary.refresh_failed", namespace: "geosite-srs", stale: false }));
+    expect(entries).toContainEqual(expect.objectContaining({ event: "request.failed", path: "/geosite-srs/failure" }));
+  });
+
+  test("logs R2 read failures and preserves HEAD semantics for retryable 503s", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    class UnavailableBucket extends MemoryR2Bucket {
+      override async get(_key: string): Promise<R2ObjectBodyLike | null> { throw new Error("injected R2 unavailable"); }
+    }
+    const response = await createWorker().fetch(new Request("https://example.com/geosite", { method: "HEAD" }), {
+      GEOSITE_BUCKET: new UnavailableBucket()
+    }, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(await response.text()).toBe("");
+    expect(logs.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "request.failed", cause: "injected R2 unavailable"
+    }));
+  });
+
+  test("logs failed background artifact builds while serving a usable stale artifact", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const bucket = new MemoryR2Bucket();
+    await bucket.putJson("state/latest.json", makeLatestState("background-current", { previousCacheKey: "background-old" }));
+    await bucket.putJson("snapshots/background-current/index/geosite.json", { google: [] });
+    await bucket.put("artifacts/v2/background-old/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
+    const ctx = new TestContext();
+    const response = await createWorker().fetch(new Request("https://example.com/geosite/google"), { GEOSITE_BUCKET: bucket }, ctx);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-stale")).toBe("1");
+    expect(await response.text()).toBe("DOMAIN-SUFFIX,old.example\n");
+    await ctx.drain();
+    expect(logs.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "artifact.build_failed", name: "google", cacheKey: "background-current"
+    }));
+  });
+
+  test("logs refresh outcomes and exposes recovery failures as retryable responses", async () => {
+    const failures = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const success = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    const worker = createWorker({ fetchImpl: async () => { throw new Error("upstream offline"); } });
+    const response = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(failures.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({ event: "geosite.refresh_failed", error: "upstream offline" }));
+    await refreshGeositeRun(env, { fetchImpl: async (_input, init) => new Response(
+      init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com"] }), { headers: { etag: "logged-refresh" } }
+    ) });
+    expect(success.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "geosite.refresh", updated: true, etag: "logged-refresh", listCount: 1, durationMs: expect.any(Number)
+    }));
   });
 
   test("returns 400 for invalid URL encoding", async () => {

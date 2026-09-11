@@ -184,13 +184,22 @@ export function createWorker(deps: WorkerDeps = {}): {
     async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
       let response: Response;
       try {
-        response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        try {
+          response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        } catch (error) {
+          if (!(error instanceof SnapshotUnavailableError)) throw error;
+          // Retry once after an actual missing snapshot. Hot artifact requests
+          // never load the full snapshot or probe both snapshot objects.
+          await ensureGeositeRefresh(env, { now, fetchImpl });
+          response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        }
       } catch (error) {
-        if (!(error instanceof SnapshotUnavailableError)) throw error;
-        // Repair only after an actual cache miss, then retry once. Hot artifact
-        // requests never load the full snapshot or probe both snapshot objects.
-        await ensureGeositeRefresh(env, { now, fetchImpl });
-        response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        logFailure("request.failed", error, { path: new URL(request.url).pathname, method: request.method });
+        if (!(error instanceof ServiceUnavailableError)) throw error;
+        const retryHeaders = { "retry-after": "30", "cache-control": "no-store" };
+        response = new URL(request.url).pathname === "/geosite"
+          ? json(503, { ok: false, error: "geosite data not ready" }, retryHeaders)
+          : text(503, "geosite temporarily unavailable", retryHeaders);
       }
       const tagged = withGeositeRobotsTag(request, response);
       return withoutBodyForHead(request, tagged);
@@ -230,13 +239,25 @@ function withoutBodyForHead(request: Request, response: Response): Response {
 }
 
 export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): Promise<RefreshResult> {
+  const started = Date.now();
+  try {
+    const result = await refreshGeositeSnapshot(env, deps);
+    console.log(JSON.stringify({ event: "geosite.refresh", ...result, durationMs: Date.now() - started }));
+    return result;
+  } catch (error) {
+    logFailure("geosite.refresh_failed", error, { durationMs: Date.now() - started });
+    throw new ServiceUnavailableError("geosite refresh failed", { cause: error });
+  }
+}
+
+async function refreshGeositeSnapshot(env: WorkerEnv, deps: WorkerDeps): Promise<RefreshResult> {
   const now = deps.now ?? (() => Date.now());
   const fetchImpl = resolveFetchImpl(deps.fetchImpl);
   const checkedAt = new Date(now()).toISOString();
   const yamlUrl = env.UPSTREAM_YAML_URL ?? DEFAULT_UPSTREAM_YAML_URL;
   const userAgent = env.UPSTREAM_USER_AGENT ?? DEFAULT_UPSTREAM_USER_AGENT;
 
-  const currentObject = await env.GEOSITE_BUCKET.get(LATEST_STATE_KEY);
+  const currentObject = await getObject(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
   const current = currentObject ? JSON.parse(await currentObject.text()) as LatestState : null;
   const expectedEtag = currentObject?.etag ?? null;
   // Cron checks metadata only: lifecycle deletion must not be hidden by a
@@ -561,7 +582,9 @@ async function handleGeositeIndex(
 
   const snapshot = await loadSnapshotPayload(env, latest);
   const builtIndex = buildIndexFromSnapshot(snapshot.lists);
-  ctx.waitUntil(writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, builtIndex));
+  ctx.waitUntil(writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, builtIndex).catch((error) => {
+    logFailure("index.persist_failed", error, { cacheKey: latest.upstream.cacheKey });
+  }));
 
   return json(200, builtIndex, indexHeaders);
 }
@@ -600,15 +623,15 @@ async function handleGeositeRules(
     return text(404, `list not found: ${name}`);
   }
 
-  const compilePromise = ensureArtifactForLatest(env, latest, mode, name, filter);
-
   if (!filter && latest.previousCacheKey && index && hasOwn(index, name)) {
     const staleKey = artifactKey(latest.previousCacheKey, mode, name, filter);
     const staleArtifact = await readText(env.GEOSITE_BUCKET, staleKey);
     if (staleArtifact !== null) {
       const responseEtag = buildRulesEtag(latest.previousCacheKey, mode, name, filter);
       const headers = responseHeaders(latest, mode, name, filter, true, latest.previousCacheKey);
-      ctx.waitUntil(compilePromise.catch(() => undefined));
+      ctx.waitUntil(ensureArtifactForLatest(env, latest, mode, name, filter).catch((error) => {
+        logFailure("artifact.build_failed", error, { cacheKey: latest.upstream.cacheKey, mode, name });
+      }));
 
       if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
         return notModified(headers);
@@ -617,7 +640,7 @@ async function handleGeositeRules(
     }
   }
 
-  const build = await compilePromise;
+  const build = await ensureArtifactForLatest(env, latest, mode, name, filter);
   if (!build.listFound) {
     return text(404, `list not found: ${name}`);
   }
@@ -692,7 +715,7 @@ async function readThroughRemoteBinaryCache(
   const blobKey = remoteBlobKey(options.namespace, options.cacheKey);
   const metaKey = remoteMetaKey(options.namespace, options.cacheKey);
 
-  const cachedObject = await env.GEOSITE_BUCKET.get(blobKey);
+  const cachedObject = await getObject(env.GEOSITE_BUCKET, blobKey);
   const cachedBody = cachedObject ? new Uint8Array(await cachedObject.arrayBuffer()) : null;
   const cachedMeta = await normalizeRemoteBinaryCacheMeta(
     cachedObject?.customMetadata?.geositeCache,
@@ -720,7 +743,9 @@ async function readThroughRemoteBinaryCache(
   if (cached && options.serveStaleWhileRevalidate) {
     const refresh = ensureRemoteBinaryRevalidated(env, options, cached, blobKey, metaKey)
       .then(() => undefined)
-      .catch(() => undefined);
+      .catch((error) => {
+        logFailure("binary.revalidate_failed", error, { namespace: options.namespace, cacheKey: options.cacheKey });
+      });
     options.onRevalidate?.(refresh);
 
     return remoteBinaryFound({
@@ -804,15 +829,6 @@ async function revalidateRemoteBinaryFromUpstream(
     }
 
     if (!upstreamResponse.ok) {
-      if (cached) {
-        return remoteBinaryFound({
-          body: cached.body,
-          responseEtag: cached.meta.responseEtag,
-          sourceEtag: cached.meta.sourceEtag,
-          contentType: cached.meta.contentType,
-          stale: true
-        });
-      }
       throw new Error(`failed to fetch remote binary: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
     }
 
@@ -839,6 +855,7 @@ async function revalidateRemoteBinaryFromUpstream(
       stale: false
     });
   } catch (error) {
+    logFailure("binary.refresh_failed", error, { namespace: options.namespace, cacheKey: options.cacheKey, stale: cached !== null });
     if (cached) {
       return remoteBinaryFound({
         body: cached.body,
@@ -848,7 +865,7 @@ async function revalidateRemoteBinaryFromUpstream(
         stale: true
       });
     }
-    throw error;
+    throw new ServiceUnavailableError("remote binary unavailable", { cause: error });
   }
 }
 
@@ -966,8 +983,12 @@ async function loadResolvedLists(env: WorkerEnv, latest: LatestState): Promise<R
 
   const pending = (async () => {
     const snapshot = await loadSnapshotPayload(env, latest);
-    const parsed = parseListsFromText(snapshot.lists);
-    return resolveAllLists(parsed);
+    try {
+      const parsed = parseListsFromText(snapshot.lists);
+      return resolveAllLists(parsed);
+    } catch (error) {
+      throw new ServiceUnavailableError("invalid geosite snapshot rules", { cause: error });
+    }
   })();
 
   resolvedCache.set(cacheKey, pending);
@@ -1002,7 +1023,8 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
   });
 }
 
-class SnapshotUnavailableError extends Error {}
+class ServiceUnavailableError extends Error {}
+class SnapshotUnavailableError extends ServiceUnavailableError {}
 
 async function hasSnapshotObjects(bucket: R2BucketLike, latest: LatestState): Promise<boolean> {
   const [source, index] = await Promise.all([
@@ -1022,11 +1044,7 @@ async function ensureLatestStateReady(env: WorkerEnv, deps: WorkerDeps): Promise
     return latest;
   }
 
-  try {
-    await ensureGeositeRefresh(env, deps);
-  } catch {
-    return null;
-  }
+  await ensureGeositeRefresh(env, deps);
   return ensureLatestState(env);
 }
 
@@ -1326,20 +1344,32 @@ function safeDecodeURIComponent(value: string): string | null {
   }
 }
 
-async function readText(bucket: R2BucketLike, key: string): Promise<string | null> {
-  const object = await bucket.get(key);
-  if (!object) {
-    return null;
+async function getObject(bucket: R2BucketLike, key: string): Promise<R2ObjectBodyLike | null> {
+  try {
+    return await bucket.get(key);
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to read R2 object: ${key}`, { cause: error });
   }
-  return object.text();
+}
+
+async function readText(bucket: R2BucketLike, key: string): Promise<string | null> {
+  try {
+    const object = await getObject(bucket, key);
+    return object ? await object.text() : null;
+  } catch (error) {
+    if (error instanceof ServiceUnavailableError) throw error;
+    throw new ServiceUnavailableError(`failed to read R2 text: ${key}`, { cause: error });
+  }
 }
 
 async function readJson<T>(bucket: R2BucketLike, key: string): Promise<T | null> {
   const content = await readText(bucket, key);
-  if (content === null) {
-    return null;
+  if (content === null) return null;
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    throw new ServiceUnavailableError(`invalid R2 JSON: ${key}`, { cause: error });
   }
-  return JSON.parse(content) as T;
 }
 
 async function writeText(
@@ -1355,9 +1385,11 @@ async function writeText(
     metadata.cacheControl = options.cacheControl;
   }
 
-  await bucket.put(key, content, {
-    httpMetadata: metadata
-  });
+  try {
+    await bucket.put(key, content, { httpMetadata: metadata });
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to write R2 text: ${key}`, { cause: error });
+  }
 }
 
 async function writeJson(
@@ -1373,9 +1405,11 @@ async function writeJson(
     metadata.cacheControl = options.cacheControl;
   }
 
-  await bucket.put(key, `${JSON.stringify(value)}\n`, {
-    httpMetadata: metadata
-  });
+  try {
+    await bucket.put(key, `${JSON.stringify(value)}\n`, { httpMetadata: metadata });
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to write R2 JSON: ${key}`, { cause: error });
+  }
 }
 
 async function writeRemoteBinary(
@@ -1436,6 +1470,15 @@ function isSameStringArray(left: string[], right: string[]): boolean {
   }
 
   return true;
+}
+
+function logFailure(event: string, error: unknown, fields: Record<string, unknown> = {}): void {
+  console.error(JSON.stringify({
+    event,
+    ...fields,
+    error: error instanceof Error ? error.message : String(error),
+    ...(error instanceof Error && error.cause instanceof Error ? { cause: error.cause.message } : {})
+  }));
 }
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
