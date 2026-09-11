@@ -1034,7 +1034,7 @@ describe("worker fetch routes", () => {
     const retryCtx = new TestContext();
     await worker.fetch(url, env, retryCtx);
     await retryCtx.drain();
-    expect(conditionalHeaders).toEqual([null, "v1", "v1"]);
+    expect(conditionalHeaders).toEqual([null, '"v1"', '"v1"']);
     const repaired = await worker.fetch(url, env, new TestContext());
     expect(await repaired.text()).toBe("body-v2");
     expect(repaired.headers.get("etag")).toContain(":v2");
@@ -1116,7 +1116,7 @@ describe("worker fetch routes", () => {
     let calls = 0;
     const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
       if (++calls === 1) return new Response("body-v1", { headers: { etag: "v1" } });
-      expect(new Headers(init?.headers).get("if-none-match")).toBe("v1");
+      expect(new Headers(init?.headers).get("if-none-match")).toBe('"v1"');
       entered.resolve();
       await release.promise;
       return new Response(null, { status: 304 });
@@ -1222,7 +1222,7 @@ describe("worker fetch routes", () => {
 
     const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       calls += 1;
-      expect(init?.headers).toBeDefined();
+      expect(new Headers(init?.headers).get("if-none-match")).toBe(calls === 1 ? null : '"srs-etag-v1"');
       return new Response(calls === 1 ? payload : null, {
         status: calls === 1 ? 200 : 304,
         headers: {
@@ -1455,6 +1455,43 @@ describe("worker fetch routes", () => {
     expect(success.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
       event: "geosite.refresh", updated: true, etag: "logged-refresh", listCount: 1, durationMs: expect.any(Number)
     }));
+  });
+
+  test.each(["GET", "HEAD"])("uses weak comparison for %s rule validators", async (method) => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    await bucket.putJson("state/latest.json", makeLatestState("weak-validator"));
+    await bucket.put("artifacts/v2/weak-validator/balanced/google.txt", "DOMAIN-SUFFIX,google.com\n");
+    const response = await createWorker().fetch(new Request("https://example.com/geosite/google", {
+      method,
+      headers: { "if-none-match": '"unrelated", W/"geosite-rules-v2:weak-validator:balanced:google"' }
+    }), env, new TestContext());
+    expect(response.status).toBe(304);
+    expect(await response.text()).toBe("");
+  });
+
+  test("preserves an upstream opaque validator when quoting it for binary revalidation", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, MRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      calls += 1;
+      if (calls === 1) return new Response("mrs-body", { headers: { etag: 'W/"opaque:/+=="' } });
+      expect(new Headers(init?.headers).get("if-none-match")).toBe('"opaque:/+=="');
+      return new Response(null, { status: 304 });
+    } });
+    const url = new Request("https://example.com/geosite-mrs/opaque");
+    const first = await worker.fetch(url, env, new TestContext());
+    const etag = first.headers.get("etag");
+    now += 2000;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await ctx.drain();
+    const fresh = await worker.fetch(new Request(url, { headers: { "if-none-match": `W/${etag}` } }), env, new TestContext());
+    expect(fresh.status).toBe(304);
+    expect(fresh.headers.get("x-stale")).toBeNull();
+    expect(calls).toBe(2);
   });
 
   test("returns 400 for invalid URL encoding", async () => {

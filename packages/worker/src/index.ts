@@ -798,7 +798,7 @@ async function revalidateRemoteBinaryFromUpstream(
     "user-agent": options.userAgent
   };
   if (cached?.meta.sourceEtag) {
-    requestHeaders["if-none-match"] = cached.meta.sourceEtag;
+    requestHeaders["if-none-match"] = `"${cached.meta.sourceEtag}"`;
   }
 
   const nowIso = new Date(options.now()).toISOString();
@@ -888,8 +888,9 @@ function matchesIfNoneMatch(ifNoneMatch: string | null, etag: string): boolean {
 
   return ifNoneMatch
     .split(",")
-    .map((item) => item.trim())
-    .some((item) => item === etag);
+    // If-None-Match uses weak comparison for the supported GET/HEAD methods.
+    .map((item) => item.trim().replace(/^W\//, ""))
+    .some((item) => item === etag.replace(/^W\//, ""));
 }
 
 function notModified(headers: Record<string, string>): Response {
