@@ -111,7 +111,7 @@ async function maybeRevalidateIndex(fetchFn: typeof fetch): Promise<void> {
 	}
 }
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, fetch, platform }) => {
 	const locale = params.lang as PanelLocale;
 	const tr = (key: string, vars: Record<string, string | number> = {}) => t(locale, key, vars);
 
@@ -130,7 +130,13 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		if (!currentIndex) {
 			currentIndex = await fetchIndexFresh(fetch);
 		} else {
-			void maybeRevalidateIndex(fetch);
+			const revalidation = maybeRevalidateIndex(fetch);
+			if (platform?.context) {
+				platform.context.waitUntil(revalidation);
+			} else {
+				// Other runtimes must keep the request alive until refresh completes.
+				await revalidation;
+			}
 		}
 
 		names = currentIndex.names;
@@ -178,13 +184,16 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 				} else {
 					previewText = rulesText.length === 0 ? tr('emptyResult') : rulesText;
 					ruleLines = String(countRuleLines(rulesText));
-					rulesCache.set(rulesKey, {
-						text: rulesText,
-						etag: normalizeEtag(upstreamEtag),
-						stale: rulesResponse.headers.get('x-stale') === '1',
-						ruleLines
-					});
-					pruneRulesCache();
+					// A fallback body belongs to the previous snapshot, even when its upstream header is current.
+					if (rulesResponse.headers.get('x-stale') !== '1') {
+						rulesCache.set(rulesKey, {
+							text: rulesText,
+							etag: normalizeEtag(upstreamEtag),
+							stale: rulesResponse.headers.get('x-stale') === '1',
+							ruleLines
+						});
+						pruneRulesCache();
+					}
 				}
 			}
 		}

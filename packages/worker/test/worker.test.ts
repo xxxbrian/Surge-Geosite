@@ -1,4 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { createHash } from "node:crypto";
+
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   createWorker,
@@ -6,12 +8,25 @@ import {
   type ExecutionContextLike,
   type R2BucketLike,
   type R2ObjectBodyLike,
+  type R2ObjectLike,
   type R2PutOptionsLike,
   type WorkerEnv
 } from "../src/index.js";
 
+afterEach(() => vi.restoreAllMocks());
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 class MemoryR2Object implements R2ObjectBodyLike {
-  constructor(private readonly data: Uint8Array) {}
+  constructor(
+    private readonly data: Uint8Array,
+    readonly etag: string,
+    readonly customMetadata: Record<string, string> = {}
+  ) {}
 
   async text(): Promise<string> {
     return new TextDecoder().decode(this.data);
@@ -23,25 +38,30 @@ class MemoryR2Object implements R2ObjectBodyLike {
 }
 
 class MemoryR2Bucket implements R2BucketLike {
-  private readonly store = new Map<string, Uint8Array>();
+  private readonly store = new Map<string, MemoryR2Object>();
 
-  async get(key: string): Promise<R2ObjectBodyLike | null> {
-    const value = this.store.get(key);
-    return value ? new MemoryR2Object(value) : null;
+  async head(key: string): Promise<R2ObjectLike | null> {
+    return this.store.get(key) ?? null;
   }
 
-  async put(key: string, value: string | ArrayBuffer | Uint8Array, _options?: R2PutOptionsLike): Promise<void> {
-    if (typeof value === "string") {
-      this.store.set(key, new TextEncoder().encode(value));
-      return;
-    }
+  async get(key: string): Promise<R2ObjectBodyLike | null> {
+    return this.store.get(key) ?? null;
+  }
 
-    if (value instanceof Uint8Array) {
-      this.store.set(key, value);
-      return;
+  async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<R2ObjectLike | null> {
+    const current = this.store.get(key);
+    const condition = options?.onlyIf;
+    if (condition?.etagMatches !== undefined && current?.etag !== condition.etagMatches) {
+      return null;
     }
-
-    this.store.set(key, new Uint8Array(value));
+    if (condition?.etagDoesNotMatch === "*" ? current :
+      condition?.etagDoesNotMatch !== undefined && current?.etag === condition.etagDoesNotMatch) {
+      return null;
+    }
+    const data = typeof value === "string" ? new TextEncoder().encode(value) : new Uint8Array(value);
+    const object = new MemoryR2Object(data, createHash("md5").update(data).digest("hex"), { ...options?.customMetadata });
+    this.store.set(key, object);
+    return object;
   }
 
   async delete(key: string): Promise<void> {
@@ -182,6 +202,8 @@ describe("refreshGeositeRun", () => {
     const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
 
     await bucket.putJson("state/latest.json", makeLatestState("etag-unchanged-v1"));
+    await bucket.put("snapshots/etag-unchanged-v1/sources.json", makeSnapshotPayload("etag-unchanged-v1", { google: "domain:google.com" }));
+    await bucket.putJson("snapshots/etag-unchanged-v1/index/geosite.json", { google: [] });
 
     const calls: string[] = [];
     const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -247,6 +269,79 @@ describe("refreshGeositeRun", () => {
     expect(latestRaw).not.toBeNull();
     const latest = JSON.parse(await latestRaw!.text()) as { upstream: { etag: string } };
     expect(latest.upstream.etag).toBe("etag-other-v3");
+  });
+
+  test.each(["head-unchanged", "get-unchanged", "updated", "initialization"] as const)(
+    "conditionally publishes latest during a concurrent %s refresh",
+    async (scenario) => {
+      const entered = deferred<void>();
+      const release = deferred<void>();
+      class InterleavedBucket extends MemoryR2Bucket {
+        armed = false;
+        override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+          if (this.armed && key === "state/latest.json") {
+            this.armed = false;
+            entered.resolve();
+            await release.promise;
+          }
+          return super.put(key, value, options);
+        }
+      }
+      const bucket = new InterleavedBucket();
+      const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+      if (scenario !== "initialization") {
+        await bucket.putJson("state/latest.json", makeLatestState("cas-v1"));
+        await bucket.put("snapshots/cas-v1/sources.json", makeSnapshotPayload("cas-v1", { google: "domain:google.com" }));
+        await bucket.putJson("snapshots/cas-v1/index/geosite.json", { google: [] });
+      }
+      const slowEtag = scenario.endsWith("unchanged") ? "cas-v1" : "cas-v2";
+      const slowFetch: typeof fetch = async (_input, init) => {
+        if (init?.method === "HEAD") {
+          return new Response(null, scenario === "get-unchanged" ? { status: 405 } : { headers: { etag: slowEtag } });
+        }
+        return new Response(makeDlcYaml({ google: ["domain:slow.example"] }), { headers: { etag: slowEtag } });
+      };
+      bucket.armed = true;
+      const slow = refreshGeositeRun(env, { fetchImpl: slowFetch });
+      await entered.promise;
+      const fast = await refreshGeositeRun(env, {
+        fetchImpl: async (_input, init) => new Response(
+          init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:fast.example"] }),
+          { headers: { etag: "cas-v3" } }
+        )
+      });
+      expect(fast.updated).toBe(true);
+      release.resolve();
+      expect(await slow).toMatchObject({ updated: false, reason: "superseded", etag: "cas-v3" });
+      const latest = JSON.parse(await (await bucket.get("state/latest.json"))!.text());
+      expect(latest.upstream.etag).toBe("cas-v3");
+      expect(latest.previousCacheKey).toBe(scenario === "initialization" ? null : "cas-v1");
+    }
+  );
+
+  test.each(["source", "index", "both"] as const)("repairs missing %s objects even when upstream etag is unchanged", async (missing) => {
+    const bucket = new MemoryR2Bucket();
+    const key = `repair-${missing}`;
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    await bucket.putJson("state/latest.json", makeLatestState(key, { previousCacheKey: "retained-previous" }));
+    if (missing !== "source" && missing !== "both") {
+      await bucket.put(`snapshots/${key}/sources.json`, makeSnapshotPayload(key, { google: "domain:google.com" }));
+    }
+    if (missing !== "index" && missing !== "both") {
+      await bucket.putJson(`snapshots/${key}/index/geosite.json`, { google: [] });
+    }
+    const methods: string[] = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      methods.push(init?.method ?? "GET");
+      return new Response(init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com:@cn"] }), {
+        headers: { etag: key }
+      });
+    };
+    expect(await refreshGeositeRun(env, { fetchImpl })).toMatchObject({ updated: true, reason: "snapshot-repaired" });
+    expect(methods).toEqual(["HEAD", "GET"]);
+    expect(await bucket.get(`snapshots/${key}/sources.json`)).not.toBeNull();
+    expect(JSON.parse(await (await bucket.get(`snapshots/${key}/index/geosite.json`))!.text())).toEqual({ google: ["cn"] });
+    expect(JSON.parse(await (await bucket.get("state/latest.json"))!.text()).previousCacheKey).toBe("retained-previous");
   });
 
   test("refuses to publish invalid snapshot payload", async () => {
@@ -489,7 +584,7 @@ describe("worker fetch routes", () => {
     expect(body).toContain("DOMAIN-SUFFIX,google.com");
     expect(body).not.toContain("mail.google.com");
 
-    const cached = await bucket.get("artifacts/etag-fetch-v1/balanced/google.txt");
+    const cached = await bucket.get("artifacts/v2/etag-fetch-v1/balanced/google.txt");
     expect(cached).not.toBeNull();
 
     await ctx.drain();
@@ -620,7 +715,7 @@ describe("worker fetch routes", () => {
       google: []
     });
 
-    await bucket.put("artifacts/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
+    await bucket.put("artifacts/v2/etag-stale-v1/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
 
     const ctx = new TestContext();
     const worker = createWorker();
@@ -632,7 +727,7 @@ describe("worker fetch routes", () => {
 
     await ctx.drain();
 
-    const refreshed = await bucket.get("artifacts/etag-stale-v2/balanced/google.txt");
+    const refreshed = await bucket.get("artifacts/v2/etag-stale-v2/balanced/google.txt");
     expect(refreshed).not.toBeNull();
     expect(await refreshed!.text()).toContain("DOMAIN-SUFFIX,google.com");
   });
@@ -666,7 +761,7 @@ describe("worker fetch routes", () => {
     await bucket.putJson("snapshots/etag-del-v2/index/geosite.json", {
       github: []
     });
-    await bucket.put("artifacts/etag-del-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
+    await bucket.put("artifacts/v2/etag-del-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
 
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
@@ -700,7 +795,7 @@ describe("worker fetch routes", () => {
         github: "domain:github.com\n"
       })
     );
-    await bucket.put("artifacts/etag-noindex-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
+    await bucket.put("artifacts/v2/etag-noindex-v1/balanced/google.txt", "DOMAIN-SUFFIX,old-google.example\n");
 
     const worker = createWorker();
     const response = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
@@ -787,7 +882,7 @@ describe("worker fetch routes", () => {
     const unknownFilter = await worker.fetch(new Request("https://example.com/geosite/google@us"), env, ctx);
     expect(unknownFilter.status).toBe(200);
     expect(await unknownFilter.text()).toBe("");
-    expect(await bucket.get("artifacts/etag-filter-v1/balanced/google@us.txt")).toBeNull();
+    expect(await bucket.get("artifacts/v2/etag-filter-v1/balanced/google@us.txt")).toBeNull();
 
     const knownFilter = await worker.fetch(new Request("https://example.com/geosite/google@cn"), env, ctx);
     expect(knownFilter.status).toBe(200);
@@ -800,6 +895,38 @@ describe("worker fetch routes", () => {
     expect(JSON.parse(await indexRaw!.text())).toEqual({
       google: ["cn"]
     });
+  });
+
+  test.each(["/geosite", "/geosite/google"])("repairs dangling snapshots on a cold request to %s", async (route) => {
+    const bucket = new MemoryR2Bucket();
+    const key = route === "/geosite" ? "request-repair-index" : "request-repair-rule";
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    await bucket.putJson("state/latest.json", makeLatestState(key));
+    let calls = 0;
+    const worker = createWorker({ fetchImpl: async (_input, init) => {
+      calls += 1;
+      return new Response(init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com"] }), { headers: { etag: key } });
+    } });
+    const response = await worker.fetch(new Request(`https://example.com${route}`), env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(calls).toBe(2);
+    expect(await bucket.get(`snapshots/${key}/sources.json`)).not.toBeNull();
+    expect(await bucket.get(`snapshots/${key}/index/geosite.json`)).not.toBeNull();
+  });
+
+  test("hot artifact requests do not probe or download snapshot objects", async () => {
+    class CountingBucket extends MemoryR2Bucket {
+      reads: string[] = [];
+      override async head(key: string) { this.reads.push(`HEAD ${key}`); return super.head(key); }
+      override async get(key: string) { this.reads.push(`GET ${key}`); return super.get(key); }
+    }
+    const bucket = new CountingBucket();
+    await bucket.putJson("state/latest.json", makeLatestState("hot-artifact"));
+    await bucket.put("artifacts/v2/hot-artifact/balanced/google.txt", "DOMAIN-SUFFIX,google.com\n");
+    const worker = createWorker({ fetchImpl: async () => { throw new Error("unexpected upstream fetch"); } });
+    const response = await worker.fetch(new Request("https://example.com/geosite/google"), { GEOSITE_BUCKET: bucket }, new TestContext());
+    expect(response.status).toBe(200);
+    expect(bucket.reads).toEqual(["GET state/latest.json", "GET artifacts/v2/hot-artifact/balanced/google.txt"]);
   });
 
   test("recovers from transient snapshot parse failure without poisoned cache", async () => {
@@ -824,7 +951,9 @@ describe("worker fetch routes", () => {
     await bucket.put("snapshots/etag-poison-v1/sources.json", strToU8("not-gzip"));
 
     const worker = createWorker();
-    await expect(worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext())).rejects.toThrow();
+    const unavailable = await worker.fetch(new Request("https://example.com/geosite/google"), env, new TestContext());
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.headers.get("retry-after")).toBe("30");
 
     await bucket.put(
       "snapshots/etag-poison-v1/sources.json",
@@ -870,6 +999,171 @@ describe("worker fetch routes", () => {
     expect(second.headers.get("x-robots-tag")).toBe("noindex");
     expect(new Uint8Array(await second.arrayBuffer())).toEqual(payload);
     expect(calls).toBe(1);
+  });
+
+  test("keeps binary bytes and metadata together when an atomic replacement fails", async () => {
+    class FailingBucket extends MemoryR2Bucket {
+      fail = false;
+      override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+        if (this.fail && key.includes("/blob/")) throw new Error("injected R2 write failure");
+        return super.put(key, value, options);
+      }
+    }
+    const bucket = new FailingBucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    const conditionalHeaders: Array<string | null> = [];
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      conditionalHeaders.push(new Headers(init?.headers).get("if-none-match"));
+      calls += 1;
+      return new Response(calls === 1 ? "body-v1" : "body-v2", { headers: { etag: calls === 1 ? "v1" : "v2" } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/atomic");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    bucket.fail = true;
+    const failedCtx = new TestContext();
+    const failed = await worker.fetch(url, env, failedCtx);
+    expect(await failed.text()).toBe("body-v1");
+    await failedCtx.drain();
+    const object = await bucket.get("remote-cache/geosite-srs/blob/geosite-atomic.srs");
+    expect(await object!.text()).toBe("body-v1");
+    expect(JSON.parse(object!.customMetadata!.geositeCache!)).toMatchObject({ version: 2, sourceEtag: "v1" });
+    bucket.fail = false;
+    const retryCtx = new TestContext();
+    await worker.fetch(url, env, retryCtx);
+    await retryCtx.drain();
+    expect(conditionalHeaders).toEqual([null, '"v1"', '"v1"']);
+    const repaired = await worker.fetch(url, env, new TestContext());
+    expect(await repaired.text()).toBe("body-v2");
+    expect(repaired.headers.get("etag")).toContain(":v2");
+    expect(repaired.headers.get("x-stale")).toBeNull();
+  });
+
+  test("readers see matching binary metadata on either side of a pending write", async () => {
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    class InterleavedBucket extends MemoryR2Bucket {
+      armed = false;
+      override async put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike) {
+        if (this.armed && key.includes("/blob/")) {
+          this.armed = false;
+          entered.resolve();
+          await release.promise;
+        }
+        return super.put(key, value, options);
+      }
+    }
+    const bucket = new InterleavedBucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async () => {
+      calls += 1;
+      return new Response(`body-v${calls}`, { headers: { etag: `v${calls}` } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/interleaved");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    bucket.armed = true;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await entered.promise;
+    const duringCtx = new TestContext();
+    const during = await worker.fetch(url, env, duringCtx);
+    expect(await during.text()).toBe("body-v1");
+    expect(during.headers.get("etag")).toContain(":v1");
+    release.resolve();
+    await Promise.all([ctx.drain(), duringCtx.drain()]);
+    const after = await worker.fetch(url, env, new TestContext());
+    expect(await after.text()).toBe("body-v2");
+    expect(after.headers.get("etag")).toContain(":v2");
+  });
+
+  test("ignores mismatched legacy binary sidecars and re-fetches without their validators", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    const key = "remote-cache/geosite-srs/blob/geosite-legacy.srs";
+    await bucket.put(key, "legacy-body-v1");
+    await bucket.putJson("remote-cache/geosite-srs/meta/geosite-legacy.srs.json", {
+      version: 1, sourceEtag: "v2", responseEtag: '"incorrect-v2"',
+      fetchedAt: "2026-02-15T00:00:00Z", contentType: "application/octet-stream"
+    });
+    const worker = createWorker({ now: () => Date.parse("2026-02-15T00:00:00Z"), fetchImpl: async (_input, init) => {
+      expect(new Headers(init?.headers).has("if-none-match")).toBe(false);
+      return new Response("body-v2", { headers: { etag: "v2" } });
+    } });
+    const url = new Request("https://example.com/geosite-srs/legacy");
+    const ctx = new TestContext();
+    const stale = await worker.fetch(url, env, ctx);
+    expect(await stale.text()).toBe("legacy-body-v1");
+    expect(stale.headers.get("etag")).toContain(createHash("sha256").update("legacy-body-v1").digest("hex"));
+    expect(stale.headers.has("x-upstream-etag")).toBe(false);
+    expect(stale.headers.get("x-stale")).toBe("1");
+    await ctx.drain();
+    const fresh = await worker.fetch(url, env, new TestContext());
+    expect(await fresh.text()).toBe("body-v2");
+    expect(fresh.headers.get("etag")).toContain(":v2");
+  });
+
+  test("a delayed binary 304 cannot overwrite a concurrently published body", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, SRS_CACHE_TTL_SECONDS: "1" };
+    const entered = deferred<void>();
+    const release = deferred<void>();
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      if (++calls === 1) return new Response("body-v1", { headers: { etag: "v1" } });
+      expect(new Headers(init?.headers).get("if-none-match")).toBe('"v1"');
+      entered.resolve();
+      await release.promise;
+      return new Response(null, { status: 304 });
+    } });
+    const url = new Request("https://example.com/geosite-srs/late304");
+    await worker.fetch(url, env, new TestContext());
+    now += 2000;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await entered.promise;
+    await bucket.put("remote-cache/geosite-srs/blob/geosite-late304.srs", "body-v2", {
+      customMetadata: { geositeCache: JSON.stringify({
+        version: 2, sourceEtag: "v2", responseEtag: '"v2"',
+        fetchedAt: new Date(now).toISOString(), contentType: "application/octet-stream"
+      }) }
+    });
+    release.resolve();
+    await ctx.drain();
+    const fresh = await worker.fetch(url, env, new TestContext());
+    expect(await fresh.text()).toBe("body-v2");
+    expect(fresh.headers.get("etag")).toBe('"v2"');
+  });
+
+  test("recompiles rules after converter upgrades and rejects legacy cache validators", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    await bucket.putJson("state/latest.json", makeLatestState("converter-upgrade", { previousCacheKey: "converter-old" }));
+    await bucket.put("snapshots/converter-upgrade/sources.json", makeSnapshotPayload("converter-upgrade", {
+      google: "domain:current.example\n"
+    }));
+    await bucket.putJson("snapshots/converter-upgrade/index/geosite.json", { google: [] });
+    await bucket.put("artifacts/converter-upgrade/balanced/google.txt", "DOMAIN,legacy-wrong.example\n");
+    await bucket.put("artifacts/converter-old/balanced/google.txt", "DOMAIN,legacy-stale.example\n");
+    const worker = createWorker();
+    const request = new Request("https://example.com/geosite/google", {
+      headers: { "if-none-match": '"converter-upgrade:balanced:google"' }
+    });
+    const response = await worker.fetch(request, env, new TestContext());
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("DOMAIN-SUFFIX,current.example\n");
+    expect(response.headers.get("x-stale")).toBeNull();
+    expect(response.headers.get("etag")).toBe('"geosite-rules-v2:converter-upgrade:balanced:google"');
+    expect(await bucket.get("artifacts/v2/converter-upgrade/balanced/google.txt")).not.toBeNull();
+    const conditional = await worker.fetch(new Request(request.url, {
+      headers: { "if-none-match": response.headers.get("etag")! }
+    }), env, new TestContext());
+    expect(conditional.status).toBe(304);
   });
 
   test("returns stale geosite-srs cache when upstream refresh fails", async () => {
@@ -928,7 +1222,7 @@ describe("worker fetch routes", () => {
 
     const fetchImpl: typeof fetch = async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       calls += 1;
-      expect(init?.headers).toBeDefined();
+      expect(new Headers(init?.headers).get("if-none-match")).toBe(calls === 1 ? null : '"srs-etag-v1"');
       return new Response(calls === 1 ? payload : null, {
         status: calls === 1 ? 200 : 304,
         headers: {
@@ -1094,6 +1388,110 @@ describe("worker fetch routes", () => {
     expect(calls).toBe(1);
 
     expect(await bucket.get("remote-cache/geosite-mrs/blob/adblock.mrs")).not.toBeNull();
+  });
+
+  test("logs upstream failures and returns a retryable cold binary 503", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const worker = createWorker({ fetchImpl: async () => new Response("upstream rejected", { status: 502 }) });
+    const response = await worker.fetch(new Request("https://example.com/geosite-srs/failure"), {
+      GEOSITE_BUCKET: new MemoryR2Bucket()
+    }, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
+    expect(await response.text()).toBe("geosite temporarily unavailable");
+    const entries = logs.mock.calls.map(([message]) => JSON.parse(String(message)));
+    expect(entries).toContainEqual(expect.objectContaining({ event: "binary.refresh_failed", namespace: "geosite-srs", stale: false }));
+    expect(entries).toContainEqual(expect.objectContaining({ event: "request.failed", path: "/geosite-srs/failure" }));
+  });
+
+  test("logs R2 read failures and preserves HEAD semantics for retryable 503s", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    class UnavailableBucket extends MemoryR2Bucket {
+      override async get(_key: string): Promise<R2ObjectBodyLike | null> { throw new Error("injected R2 unavailable"); }
+    }
+    const response = await createWorker().fetch(new Request("https://example.com/geosite", { method: "HEAD" }), {
+      GEOSITE_BUCKET: new UnavailableBucket()
+    }, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(await response.text()).toBe("");
+    expect(logs.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "request.failed", cause: "injected R2 unavailable"
+    }));
+  });
+
+  test("logs failed background artifact builds while serving a usable stale artifact", async () => {
+    const logs = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const bucket = new MemoryR2Bucket();
+    await bucket.putJson("state/latest.json", makeLatestState("background-current", { previousCacheKey: "background-old" }));
+    await bucket.putJson("snapshots/background-current/index/geosite.json", { google: [] });
+    await bucket.put("artifacts/v2/background-old/balanced/google.txt", "DOMAIN-SUFFIX,old.example\n");
+    const ctx = new TestContext();
+    const response = await createWorker().fetch(new Request("https://example.com/geosite/google"), { GEOSITE_BUCKET: bucket }, ctx);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-stale")).toBe("1");
+    expect(await response.text()).toBe("DOMAIN-SUFFIX,old.example\n");
+    await ctx.drain();
+    expect(logs.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "artifact.build_failed", name: "google", cacheKey: "background-current"
+    }));
+  });
+
+  test("logs refresh outcomes and exposes recovery failures as retryable responses", async () => {
+    const failures = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const success = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, UPSTREAM_YAML_URL: DEFAULT_YAML_URL };
+    const worker = createWorker({ fetchImpl: async () => { throw new Error("upstream offline"); } });
+    const response = await worker.fetch(new Request("https://example.com/geosite"), env, new TestContext());
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("30");
+    expect(failures.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({ event: "geosite.refresh_failed", error: "upstream offline" }));
+    await refreshGeositeRun(env, { fetchImpl: async (_input, init) => new Response(
+      init?.method === "HEAD" ? null : makeDlcYaml({ google: ["domain:google.com"] }), { headers: { etag: "logged-refresh" } }
+    ) });
+    expect(success.mock.calls.map(([message]) => JSON.parse(String(message)))).toContainEqual(expect.objectContaining({
+      event: "geosite.refresh", updated: true, etag: "logged-refresh", listCount: 1, durationMs: expect.any(Number)
+    }));
+  });
+
+  test.each(["GET", "HEAD"])("uses weak comparison for %s rule validators", async (method) => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket };
+    await bucket.putJson("state/latest.json", makeLatestState("weak-validator"));
+    await bucket.put("artifacts/v2/weak-validator/balanced/google.txt", "DOMAIN-SUFFIX,google.com\n");
+    const response = await createWorker().fetch(new Request("https://example.com/geosite/google", {
+      method,
+      headers: { "if-none-match": '"unrelated", W/"geosite-rules-v2:weak-validator:balanced:google"' }
+    }), env, new TestContext());
+    expect(response.status).toBe(304);
+    expect(await response.text()).toBe("");
+  });
+
+  test("preserves an upstream opaque validator when quoting it for binary revalidation", async () => {
+    const bucket = new MemoryR2Bucket();
+    const env: WorkerEnv = { GEOSITE_BUCKET: bucket, MRS_CACHE_TTL_SECONDS: "1" };
+    let now = Date.parse("2026-02-15T00:00:00Z");
+    let calls = 0;
+    const worker = createWorker({ now: () => now, fetchImpl: async (_input, init) => {
+      calls += 1;
+      if (calls === 1) return new Response("mrs-body", { headers: { etag: 'W/"opaque:/+=="' } });
+      expect(new Headers(init?.headers).get("if-none-match")).toBe('"opaque:/+=="');
+      return new Response(null, { status: 304 });
+    } });
+    const url = new Request("https://example.com/geosite-mrs/opaque");
+    const first = await worker.fetch(url, env, new TestContext());
+    const etag = first.headers.get("etag");
+    now += 2000;
+    const ctx = new TestContext();
+    await worker.fetch(url, env, ctx);
+    await ctx.drain();
+    const fresh = await worker.fetch(new Request(url, { headers: { "if-none-match": `W/${etag}` } }), env, new TestContext());
+    expect(fresh.status).toBe(304);
+    expect(fresh.headers.get("x-stale")).toBeNull();
+    expect(calls).toBe(2);
   });
 
   test("returns 400 for invalid URL encoding", async () => {

@@ -35,3 +35,6 @@ packages/worker/.wrangler/
 .env
 .env.*
 !.env.example
+
+# Prewarm reports
+out-remote/

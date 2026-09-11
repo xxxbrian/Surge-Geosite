@@ -7,6 +7,9 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		interface Platform {
+			context?: {
+				waitUntil(promise: Promise<unknown>): void;
+			};
 			env: {
 				ASSETS: {
 					fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;

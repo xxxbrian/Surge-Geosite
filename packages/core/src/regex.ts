@@ -1,7 +1,11 @@
+import { registrableLabelIndex } from "./domain-safety.js";
+import { hasUnsupportedRegexSyntax, normalizeSimpleRe2Pattern } from "./regex-syntax.js";
 import type { RegexMode, RegexTranspileResult } from "./types.js";
 
-const EXACT_DOMAIN_PATTERN = /^\^([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
-const SUFFIX_DOMAIN_PATTERN = /^\(\^\|\\\.\)([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
+// Hosts are normalized to lowercase, but source regex literals remain case-sensitive.
+// An uppercase literal must not be lowered and then reported as lossless.
+const EXACT_DOMAIN_PATTERN = /^\^([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/;
+const SUFFIX_DOMAIN_PATTERN = /^\(\^\|\\\.\)([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/;
 const REPEATED_SUBDOMAIN_PATTERN = /^\^\(\.\+\\\.\)\*([a-z0-9-]+(?:\\\.[a-z0-9-]+)+)\$$/i;
 const ADVANCED_TOKENS_PATTERN = /\(\?<?[=!]|\\[1-9]/;
 const MIN_WILDCARD_LITERAL_CHARS = 3;
@@ -12,6 +16,24 @@ interface WildcardCandidate {
 }
 
 export function transpileRegexToSurge(pattern: string, mode: RegexMode): RegexTranspileResult {
+  pattern = normalizeSimpleRe2Pattern(pattern);
+  if (hasUnsupportedRegexSyntax(pattern)) {
+    return {
+      status: "unsupported",
+      rules: [],
+      reason: "Regex syntax is outside the supported Go/RE2 conversion subset."
+    };
+  }
+
+  const lowercase = pattern.toLowerCase();
+  if (pattern !== lowercase && (EXACT_DOMAIN_PATTERN.test(lowercase) || SUFFIX_DOMAIN_PATTERN.test(lowercase))) {
+    return {
+      status: "unsupported",
+      rules: [],
+      reason: "Case-sensitive uppercase domain literals cannot be preserved by case-insensitive Surge rules."
+    };
+  }
+
   const exact = pattern.match(EXACT_DOMAIN_PATTERN);
   if (exact) {
     return {
@@ -168,6 +190,8 @@ function wildcardFromRegex(pattern: string): WildcardCandidate {
     }
 
     if (pattern.startsWith("(^|\\.)", index)) {
+      // Keep the subdomain branch only. Recovering root hosts with a leading *
+      // would also admit unrelated prefixes; omission is preferable here.
       out += "*.";
       index += "(^|\\.)".length - 1;
       continue;
@@ -239,6 +263,8 @@ function wildcardFromRegex(pattern: string): WildcardCandidate {
     }
 
     if (char === "." || isDomainChar(char)) {
+      // An unescaped dot is deliberately specialized to a literal dot. Do not
+      // replace it with * just to recover omitted hosts: that widens matching.
       out += char;
       continue;
     }
@@ -263,18 +289,14 @@ function getHeuristicWildcardSafety(value: string): WildcardCandidate["safety"] 
     return "none";
   }
 
-  const domainLabels = labels[0] === "*" ? labels.slice(1) : labels;
-  if (domainLabels.length < 2) {
-    return "unsafe";
-  }
-
-  const registrableLabel = domainLabels[domainLabels.length - 2];
+  const anchorIndex = registrableLabelIndex(labels);
+  const registrableLabel = labels[anchorIndex];
   if (!registrableLabel || registrableLabel === "*" || !/[a-z0-9]/i.test(registrableLabel)) {
     return "unsafe";
   }
 
-  const literalChars = domainLabels
-    .slice(0, -1)
+  const literalChars = labels
+    .slice(0, anchorIndex + 1)
     .join("")
     .replace(/\*/g, "").length;
   return literalChars >= MIN_WILDCARD_LITERAL_CHARS ? "safe" : "low-information";

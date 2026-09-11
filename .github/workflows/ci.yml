@@ -1,0 +1,23 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - run: npm install --global pnpm@11.5.2
+      - run: pnpm install --frozen-lockfile
+      # Run before normal builds so a missing core/dist cannot be hidden by them.
+      - run: pnpm --filter @surge-geosite/worker exec wrangler deploy --dry-run
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm --filter @surge-geosite/panel exec wrangler deploy --dry-run

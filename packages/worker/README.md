@@ -12,12 +12,12 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 
 - `scheduled`:
   - HEAD upstream YAML release asset to check ETag, falling back to GET when HEAD has no usable ETag.
-  - If ETag unchanged: update check timestamp only.
+  - If ETag is unchanged: update the check timestamp only when the snapshot and index exist; rebuild missing data.
   - If ETag changed: download `dlc.dat_plain.yml`, normalize rules, resolve lists, write snapshot + compact filter index to R2, then update `state/latest.json`.
 - `fetch`:
   - Route `/geosite*` requests to API handlers.
   - API handlers read latest state from R2.
-  - Serve prebuilt artifact from `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt` when available.
+  - Serve prebuilt artifact from `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt` when available.
   - On miss, compile on-demand from snapshot and cache artifact.
   - Unknown filters are served as empty output but are not persisted as artifacts.
   - If previous cache artifact exists, return stale artifact immediately and refresh latest artifact in background (`waitUntil`).
@@ -28,12 +28,13 @@ Cloudflare Worker runtime for geosite API serving with built-in cron refresh.
 - `state/latest.json`
 - `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
-- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
+- `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`
+
+Increment `CONVERTER_VERSION` when conversion semantics change.
 
 Retention:
 
-- Configure R2 Lifecycle rules for `snapshots/` and `artifacts/` prefixes in Cloudflare dashboard.
-- Recommended: keep a short retention window (for example 7-30 days) based on your traffic and rollback needs.
+- Preserve snapshots referenced by the current and previous cache keys; only artifacts may expire solely by age.
 
 ## Wrangler
 

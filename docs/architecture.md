@@ -22,7 +22,7 @@ Recommended route priority:
 
 1. Cron runs every 5 minutes.
 2. Worker sends `HEAD` to the upstream YAML release asset (`dlc.dat_plain.yml`).
-3. If ETag unchanged: only update check timestamp.
+3. If ETag is unchanged: only update the check timestamp when the snapshot and index exist; rebuild missing data.
 4. If ETag changed:
    - Download YAML once.
    - Normalize YAML rules into source text.
@@ -33,7 +33,7 @@ Recommended route priority:
 ## Serve Pipeline
 
 1. Read `state/latest.json`.
-2. Try `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`.
+2. Try `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`.
 3. If hit: return immediately.
 4. If miss:
    - Optionally return stale artifact from previous cache key (non-filter path), then rebuild latest in background.
@@ -61,9 +61,9 @@ Recommended route priority:
 - `state/latest.json`
 - `snapshots/{cacheKey}/sources.json`
 - `snapshots/{cacheKey}/index/geosite.json`
-- `artifacts/{cacheKey}/{mode}/{name[@filter]}.txt`
+- `artifacts/v{converterVersion}/{cacheKey}/{mode}/{name[@filter]}.txt`
 
 ## Operations
 
-- Keep lifecycle policies for `snapshots/` and `artifacts/` (for example 7-30 days).
+- Preserve snapshots referenced by the current and previous cache keys; only artifacts may expire solely by age.
 - CLI (`packages/cli`) is for local debug/verification, not required in production serving path.

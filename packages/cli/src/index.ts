@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import path from "node:path";
 
 import {
@@ -44,6 +46,16 @@ export async function runCli(argv: string[]): Promise<number> {
 }
 
 async function runBuild(flags: Record<string, string | boolean>): Promise<number> {
+  for (const key of ["data-dir", "out-dir", "list"]) {
+    if (Object.hasOwn(flags, key) && (typeof flags[key] !== "string" || !(flags[key] as string).trim())) {
+      console.error(`missing value for --${key}`);
+      return 1;
+    }
+  }
+  if (typeof flags.list === "string" && splitListArg(flags.list).length === 0) {
+    console.error("--list must contain at least one dataset");
+    return 1;
+  }
   const dataDir = getStringFlag(flags, "data-dir");
   const outDir = path.resolve(process.cwd(), getStringFlag(flags, "out-dir") ?? "out");
   const listArg = getStringFlag(flags, "list");
@@ -58,7 +70,7 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
   const resolved = resolveAllLists(parsed);
 
   const requestedNames = listArg
-    ? splitListArg(listArg).map((name) => name.toUpperCase())
+    ? [...new Set(splitListArg(listArg).map((name) => name.toUpperCase()))]
     : Object.keys(resolved).sort();
 
   for (const listName of requestedNames) {
@@ -67,6 +79,8 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
       return 1;
     }
   }
+
+  const previousNames = await readPreviousOutputNames(outDir);
 
   await mkdir(path.join(outDir, "rules"), { recursive: true });
   await mkdir(path.join(outDir, "resolved"), { recursive: true });
@@ -129,12 +143,38 @@ async function runBuild(flags: Record<string, string | boolean>): Promise<number
   };
 
   await writeFile(path.join(outDir, "stats", "global.json"), `${JSON.stringify(globalStats, null, 2)}\n`, "utf8");
+  // Remove only artifacts owned by the previous manifest; unrelated files stay intact.
+  for (const name of previousNames) {
+    if (Object.hasOwn(indexRecord, name)) continue;
+    for (const mode of ALL_MODES) {
+      await rm(path.join(outDir, "rules", mode, `${name}.txt`), { force: true });
+    }
+    await rm(path.join(outDir, "resolved", `${name}.json`), { force: true });
+    await rm(path.join(outDir, "stats", "lists", `${name}.json`), { force: true });
+  }
   await writeFile(path.join(outDir, "index", "geosite.json"), `${JSON.stringify(indexRecord, null, 2)}\n`, "utf8");
   await writeFile(path.join(outDir, "meta.json"), `${JSON.stringify(meta, null, 2)}\n`, "utf8");
 
   console.log(`generated lists=${listStats.length} modes=${ALL_MODES.join(",")} output=${outDir}`);
   console.log(`default mode path: ${path.join(outDir, "rules", "balanced")}`);
   return 0;
+}
+
+async function readPreviousOutputNames(outDir: string): Promise<string[]> {
+  try {
+    const manifest: unknown = JSON.parse(await readFile(path.join(outDir, "index", "geosite.json"), "utf8"));
+    if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+      throw new Error("invalid previous output index");
+    }
+    const names = Object.keys(manifest);
+    if (names.some((name) => !/^[a-z0-9!-]+$/.test(name))) {
+      throw new Error("invalid list name in previous output index");
+    }
+    return names;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
 }
 
 function splitListArg(input: string): string[] {
@@ -159,7 +199,16 @@ build output layout:
   <out>/stats/lists/<list>.json`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMainModule(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  } catch {
+    return false;
+  }
+}
+
+if (isMainModule()) {
   runCli(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;

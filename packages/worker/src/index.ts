@@ -18,6 +18,8 @@ const DEFAULT_MRS_UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/MetaCub
 const DEFAULT_MRS_UPSTREAM_USER_AGENT = "surge-geosite-worker/2";
 const DEFAULT_MRS_CACHE_TTL_SECONDS = 86400;
 const LATEST_STATE_KEY = "state/latest.json";
+// Bump whenever parsing, resolution, or rule emission semantics change.
+const CONVERTER_VERSION = 2;
 const GEOSITE_INDEX_SCHEMA_VERSION = 2;
 const SNAPSHOT_CACHE_LIMIT = 2;
 const RESOLVED_CACHE_LIMIT = 2;
@@ -32,12 +34,20 @@ const artifactBuildLocks = new Map<string, Promise<ArtifactBuildResult>>();
 const remoteBinaryCacheLocks = new Map<string, Promise<ReadThroughRemoteBinaryResult>>();
 const geositeRefreshLocks = new WeakMap<R2BucketLike, Promise<RefreshResult>>();
 
-export interface R2ObjectBodyLike {
+// Narrow adapter matching the R2 Workers API; put returns null when onlyIf fails.
+export interface R2ObjectLike {
+  etag: string;
+  customMetadata?: Record<string, string>;
+}
+
+export interface R2ObjectBodyLike extends R2ObjectLike {
   text(): Promise<string>;
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export interface R2PutOptionsLike {
+  onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string };
+  customMetadata?: Record<string, string>;
   httpMetadata?: {
     contentType?: string;
     cacheControl?: string;
@@ -45,8 +55,9 @@ export interface R2PutOptionsLike {
 }
 
 export interface R2BucketLike {
+  head(key: string): Promise<R2ObjectLike | null>;
   get(key: string): Promise<R2ObjectBodyLike | null>;
-  put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<void>;
+  put(key: string, value: string | ArrayBuffer | Uint8Array, options?: R2PutOptionsLike): Promise<R2ObjectLike | null>;
   delete?(key: string): Promise<void>;
 }
 
@@ -116,7 +127,7 @@ type GeositeIndex = Record<string, string[]>;
 
 interface RefreshResult {
   updated: boolean;
-  reason: "etag-unchanged" | "etag-updated";
+  reason: "etag-unchanged" | "etag-updated" | "snapshot-repaired" | "superseded";
   checkedAt: string;
   etag: string;
   listCount: number;
@@ -129,7 +140,7 @@ interface ArtifactBuildResult {
 }
 
 interface RemoteBinaryCacheMeta {
-  version: 1;
+  version: 2;
   sourceEtag: string | null;
   responseEtag: string;
   fetchedAt: string;
@@ -171,7 +182,25 @@ export function createWorker(deps: WorkerDeps = {}): {
 
   return {
     async fetch(request: Request, env: WorkerEnv, ctx: ExecutionContextLike): Promise<Response> {
-      const response = await handleFetch(request, env, ctx, { now, fetchImpl });
+      let response: Response;
+      try {
+        try {
+          response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        } catch (error) {
+          if (!(error instanceof SnapshotUnavailableError)) throw error;
+          // Retry once after an actual missing snapshot. Hot artifact requests
+          // never load the full snapshot or probe both snapshot objects.
+          await ensureGeositeRefresh(env, { now, fetchImpl });
+          response = await handleFetch(request, env, ctx, { now, fetchImpl });
+        }
+      } catch (error) {
+        logFailure("request.failed", error, { path: new URL(request.url).pathname, method: request.method });
+        if (!(error instanceof ServiceUnavailableError)) throw error;
+        const retryHeaders = { "retry-after": "30", "cache-control": "no-store" };
+        response = new URL(request.url).pathname === "/geosite"
+          ? json(503, { ok: false, error: "geosite data not ready" }, retryHeaders)
+          : text(503, "geosite temporarily unavailable", retryHeaders);
+      }
       const tagged = withGeositeRobotsTag(request, response);
       return withoutBodyForHead(request, tagged);
     },
@@ -210,29 +239,38 @@ function withoutBodyForHead(request: Request, response: Response): Response {
 }
 
 export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): Promise<RefreshResult> {
+  const started = Date.now();
+  try {
+    const result = await refreshGeositeSnapshot(env, deps);
+    console.log(JSON.stringify({ event: "geosite.refresh", ...result, durationMs: Date.now() - started }));
+    return result;
+  } catch (error) {
+    logFailure("geosite.refresh_failed", error, { durationMs: Date.now() - started });
+    throw new ServiceUnavailableError("geosite refresh failed", { cause: error });
+  }
+}
+
+async function refreshGeositeSnapshot(env: WorkerEnv, deps: WorkerDeps): Promise<RefreshResult> {
   const now = deps.now ?? (() => Date.now());
   const fetchImpl = resolveFetchImpl(deps.fetchImpl);
   const checkedAt = new Date(now()).toISOString();
   const yamlUrl = env.UPSTREAM_YAML_URL ?? DEFAULT_UPSTREAM_YAML_URL;
   const userAgent = env.UPSTREAM_USER_AGENT ?? DEFAULT_UPSTREAM_USER_AGENT;
 
-  const current = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
+  const currentObject = await getObject(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
+  const current = currentObject ? JSON.parse(await currentObject.text()) as LatestState : null;
+  const expectedEtag = currentObject?.etag ?? null;
+  // Cron checks metadata only: lifecycle deletion must not be hidden by a
+  // stable upstream ETag or by an isolate's in-memory snapshot cache.
+  const currentSnapshotReady = current ? await hasSnapshotObjects(env.GEOSITE_BUCKET, current) : false;
 
   const observedHeadEtag = await checkUpstreamYamlEtag(yamlUrl, userAgent, fetchImpl);
-  if (observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
+  if (currentSnapshotReady && observedHeadEtag && current?.upstream.yamlUrl === yamlUrl && current.upstream.etag === observedHeadEtag) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
     };
-    await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, unchangedState);
-
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: observedHeadEtag,
-      listCount: current.snapshot.listCount
-    };
+    return publishLatestState(env.GEOSITE_BUCKET, unchangedState, expectedEtag, false);
   }
 
   const downloadResponse = await fetchImpl(yamlUrl, {
@@ -249,20 +287,12 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
   const computedEtag = downloadedEtag ?? observedHeadEtag ?? (await sha256Hex(yamlBytes));
   const cacheKey = safeCacheKey(computedEtag);
 
-  if (current?.upstream.yamlUrl === yamlUrl && current.upstream.cacheKey === cacheKey) {
+  if (currentSnapshotReady && current?.upstream.yamlUrl === yamlUrl && current.upstream.cacheKey === cacheKey) {
     const unchangedState: LatestState = {
       ...current,
       checkedAt
     };
-    await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, unchangedState);
-
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: computedEtag,
-      listCount: current.snapshot.listCount
-    };
+    return publishLatestState(env.GEOSITE_BUCKET, unchangedState, expectedEtag, false);
   }
 
   const sources = parseSourcesFromDlcPlainYaml(new TextDecoder().decode(yamlBytes));
@@ -306,32 +336,42 @@ export async function refreshGeositeRun(env: WorkerEnv, deps: WorkerDeps = {}): 
       listCount,
       generatedAt
     },
-    previousCacheKey: current?.upstream.cacheKey ?? null,
+    previousCacheKey: current?.upstream.cacheKey === cacheKey
+      ? current.previousCacheKey
+      : current?.upstream.cacheKey ?? null,
     checkedAt
   };
 
-  const latestBeforeWrite = await readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
-  if (latestBeforeWrite && latestBeforeWrite.upstream.cacheKey !== current?.upstream.cacheKey) {
-    return {
-      updated: false,
-      reason: "etag-unchanged",
-      checkedAt,
-      etag: latestBeforeWrite.upstream.etag,
-      listCount: latestBeforeWrite.snapshot.listCount
-    };
+  const result = await publishLatestState(env.GEOSITE_BUCKET, nextState, expectedEtag, true);
+  if (result.updated) {
+    if (current?.upstream.cacheKey === cacheKey) result.reason = "snapshot-repaired";
+    snapshotCache.clear();
+    resolvedCache.clear();
   }
+  return result;
+}
 
-  await writeJson(env.GEOSITE_BUCKET, LATEST_STATE_KEY, nextState);
-
-  snapshotCache.clear();
-  resolvedCache.clear();
-
+async function publishLatestState(
+  bucket: R2BucketLike,
+  next: LatestState,
+  expectedEtag: string | null,
+  updated: boolean
+): Promise<RefreshResult> {
+  // Compare the object read before any upstream work, including first initialization.
+  const written = await bucket.put(LATEST_STATE_KEY, `${JSON.stringify(next)}\n`, {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+    onlyIf: expectedEtag === null ? { etagDoesNotMatch: "*" } : { etagMatches: expectedEtag }
+  });
+  const state = written ? next : await readJson<LatestState>(bucket, LATEST_STATE_KEY);
+  if (!state) {
+    throw new Error("latest state disappeared during publication");
+  }
   return {
-    updated: true,
-    reason: "etag-updated",
-    checkedAt,
-    etag: computedEtag,
-    listCount
+    updated: written !== null && updated,
+    reason: written === null ? "superseded" : updated ? "etag-updated" : "etag-unchanged",
+    checkedAt: state.checkedAt,
+    etag: state.upstream.etag,
+    listCount: state.snapshot.listCount
   };
 }
 
@@ -542,7 +582,9 @@ async function handleGeositeIndex(
 
   const snapshot = await loadSnapshotPayload(env, latest);
   const builtIndex = buildIndexFromSnapshot(snapshot.lists);
-  ctx.waitUntil(writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, builtIndex));
+  ctx.waitUntil(writeJson(env.GEOSITE_BUCKET, latest.snapshot.indexKey, builtIndex).catch((error) => {
+    logFailure("index.persist_failed", error, { cacheKey: latest.upstream.cacheKey });
+  }));
 
   return json(200, builtIndex, indexHeaders);
 }
@@ -581,15 +623,15 @@ async function handleGeositeRules(
     return text(404, `list not found: ${name}`);
   }
 
-  const compilePromise = ensureArtifactForLatest(env, latest, mode, name, filter);
-
   if (!filter && latest.previousCacheKey && index && hasOwn(index, name)) {
     const staleKey = artifactKey(latest.previousCacheKey, mode, name, filter);
     const staleArtifact = await readText(env.GEOSITE_BUCKET, staleKey);
     if (staleArtifact !== null) {
       const responseEtag = buildRulesEtag(latest.previousCacheKey, mode, name, filter);
       const headers = responseHeaders(latest, mode, name, filter, true, latest.previousCacheKey);
-      ctx.waitUntil(compilePromise.catch(() => undefined));
+      ctx.waitUntil(ensureArtifactForLatest(env, latest, mode, name, filter).catch((error) => {
+        logFailure("artifact.build_failed", error, { cacheKey: latest.upstream.cacheKey, mode, name });
+      }));
 
       if (matchesIfNoneMatch(request.headers.get("if-none-match"), responseEtag)) {
         return notModified(headers);
@@ -598,7 +640,7 @@ async function handleGeositeRules(
     }
   }
 
-  const build = await compilePromise;
+  const build = await ensureArtifactForLatest(env, latest, mode, name, filter);
   if (!build.listFound) {
     return text(404, `list not found: ${name}`);
   }
@@ -673,20 +715,18 @@ async function readThroughRemoteBinaryCache(
   const blobKey = remoteBlobKey(options.namespace, options.cacheKey);
   const metaKey = remoteMetaKey(options.namespace, options.cacheKey);
 
-  const [cachedObject, cachedMetaRaw] = await Promise.all([
-    env.GEOSITE_BUCKET.get(blobKey),
-    readJson<RemoteBinaryCacheMeta>(env.GEOSITE_BUCKET, metaKey)
-  ]);
-
+  const cachedObject = await getObject(env.GEOSITE_BUCKET, blobKey);
   const cachedBody = cachedObject ? new Uint8Array(await cachedObject.arrayBuffer()) : null;
   const cachedMeta = await normalizeRemoteBinaryCacheMeta(
-    cachedMetaRaw,
+    cachedObject?.customMetadata?.geositeCache,
     options.namespace,
     options.cacheKey,
     cachedBody,
     options.fallbackContentType
   );
-  const cached = cachedBody && cachedMeta ? { body: cachedBody, meta: cachedMeta } : null;
+  const cached = cachedBody && cachedMeta && cachedObject
+    ? { body: cachedBody, meta: cachedMeta, objectEtag: cachedObject.etag }
+    : null;
 
   const nowMs = options.now();
   const ttlMs = options.ttlSeconds * 1000;
@@ -703,7 +743,9 @@ async function readThroughRemoteBinaryCache(
   if (cached && options.serveStaleWhileRevalidate) {
     const refresh = ensureRemoteBinaryRevalidated(env, options, cached, blobKey, metaKey)
       .then(() => undefined)
-      .catch(() => undefined);
+      .catch((error) => {
+        logFailure("binary.revalidate_failed", error, { namespace: options.namespace, cacheKey: options.cacheKey });
+      });
     options.onRevalidate?.(refresh);
 
     return remoteBinaryFound({
@@ -721,7 +763,7 @@ async function readThroughRemoteBinaryCache(
 async function ensureRemoteBinaryRevalidated(
   env: WorkerEnv,
   options: ReadThroughRemoteBinaryOptions,
-  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta } | null,
+  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta; objectEtag: string } | null,
   blobKey: string,
   metaKey: string
 ): Promise<ReadThroughRemoteBinaryResult> {
@@ -748,7 +790,7 @@ async function ensureRemoteBinaryRevalidated(
 async function revalidateRemoteBinaryFromUpstream(
   env: WorkerEnv,
   options: ReadThroughRemoteBinaryOptions,
-  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta } | null,
+  cached: { body: Uint8Array; meta: RemoteBinaryCacheMeta; objectEtag: string } | null,
   blobKey: string,
   metaKey: string
 ): Promise<ReadThroughRemoteBinaryResult> {
@@ -756,7 +798,7 @@ async function revalidateRemoteBinaryFromUpstream(
     "user-agent": options.userAgent
   };
   if (cached?.meta.sourceEtag) {
-    requestHeaders["if-none-match"] = cached.meta.sourceEtag;
+    requestHeaders["if-none-match"] = `"${cached.meta.sourceEtag}"`;
   }
 
   const nowIso = new Date(options.now()).toISOString();
@@ -766,12 +808,12 @@ async function revalidateRemoteBinaryFromUpstream(
       headers: requestHeaders
     });
 
-    if (upstreamResponse.status === 304 && cached) {
+    if (upstreamResponse.status === 304 && cached?.meta.sourceEtag) {
       const refreshedMeta: RemoteBinaryCacheMeta = {
         ...cached.meta,
         fetchedAt: nowIso
       };
-      await writeJson(env.GEOSITE_BUCKET, metaKey, refreshedMeta);
+      await writeRemoteBinary(env.GEOSITE_BUCKET, blobKey, cached.body, refreshedMeta, cached.objectEtag);
       return remoteBinaryFound({
         body: cached.body,
         responseEtag: refreshedMeta.responseEtag,
@@ -787,15 +829,6 @@ async function revalidateRemoteBinaryFromUpstream(
     }
 
     if (!upstreamResponse.ok) {
-      if (cached) {
-        return remoteBinaryFound({
-          body: cached.body,
-          responseEtag: cached.meta.responseEtag,
-          sourceEtag: cached.meta.sourceEtag,
-          contentType: cached.meta.contentType,
-          stale: true
-        });
-      }
       throw new Error(`failed to fetch remote binary: ${upstreamResponse.status} ${upstreamResponse.statusText}`);
     }
 
@@ -805,20 +838,14 @@ async function revalidateRemoteBinaryFromUpstream(
     const responseEtag = await buildRemoteBinaryEtag(options.namespace, options.cacheKey, sourceEtag, body);
 
     const nextMeta: RemoteBinaryCacheMeta = {
-      version: 1,
+      version: 2,
       sourceEtag,
       responseEtag,
       fetchedAt: nowIso,
       contentType
     };
 
-    await Promise.all([
-      writeBinary(env.GEOSITE_BUCKET, blobKey, body, {
-        contentType,
-        cacheControl: "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
-      }),
-      writeJson(env.GEOSITE_BUCKET, metaKey, nextMeta)
-    ]);
+    await writeRemoteBinary(env.GEOSITE_BUCKET, blobKey, body, nextMeta, cached?.objectEtag ?? null);
 
     return remoteBinaryFound({
       body,
@@ -828,6 +855,7 @@ async function revalidateRemoteBinaryFromUpstream(
       stale: false
     });
   } catch (error) {
+    logFailure("binary.refresh_failed", error, { namespace: options.namespace, cacheKey: options.cacheKey, stale: cached !== null });
     if (cached) {
       return remoteBinaryFound({
         body: cached.body,
@@ -837,7 +865,7 @@ async function revalidateRemoteBinaryFromUpstream(
         stale: true
       });
     }
-    throw error;
+    throw new ServiceUnavailableError("remote binary unavailable", { cause: error });
   }
 }
 
@@ -846,7 +874,7 @@ function buildIndexEtag(upstreamEtag: string): string {
 }
 
 function buildRulesEtag(upstreamEtag: string, mode: RegexMode, name: string, filter: string | null): string {
-  return `"${upstreamEtag}:${mode}:${name.toLowerCase()}${filter ? `@${filter}` : ""}"`;
+  return `"geosite-rules-v${CONVERTER_VERSION}:${upstreamEtag}:${mode}:${name.toLowerCase()}${filter ? `@${filter}` : ""}"`;
 }
 
 function matchesIfNoneMatch(ifNoneMatch: string | null, etag: string): boolean {
@@ -860,8 +888,9 @@ function matchesIfNoneMatch(ifNoneMatch: string | null, etag: string): boolean {
 
   return ifNoneMatch
     .split(",")
-    .map((item) => item.trim())
-    .some((item) => item === etag);
+    // If-None-Match uses weak comparison for the supported GET/HEAD methods.
+    .map((item) => item.trim().replace(/^W\//, ""))
+    .some((item) => item === etag.replace(/^W\//, ""));
 }
 
 function notModified(headers: Record<string, string>): Response {
@@ -880,7 +909,7 @@ async function ensureArtifactForLatest(
   name: string,
   filter: string | null
 ): Promise<ArtifactBuildResult> {
-  const lockKey = `${latest.upstream.cacheKey}:${mode}:${artifactName(name, filter)}`;
+  const lockKey = artifactKey(latest.upstream.cacheKey, mode, name, filter);
   const existingLock = artifactBuildLocks.get(lockKey);
   if (existingLock) {
     return existingLock;
@@ -955,8 +984,12 @@ async function loadResolvedLists(env: WorkerEnv, latest: LatestState): Promise<R
 
   const pending = (async () => {
     const snapshot = await loadSnapshotPayload(env, latest);
-    const parsed = parseListsFromText(snapshot.lists);
-    return resolveAllLists(parsed);
+    try {
+      const parsed = parseListsFromText(snapshot.lists);
+      return resolveAllLists(parsed);
+    } catch (error) {
+      throw new ServiceUnavailableError("invalid geosite snapshot rules", { cause: error });
+    }
   })();
 
   resolvedCache.set(cacheKey, pending);
@@ -977,7 +1010,7 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
   const pending = (async () => {
     const payload = await readJson<SnapshotPayload>(env.GEOSITE_BUCKET, latest.snapshot.sourceKey);
     if (!payload) {
-      throw new Error(`snapshot not found: ${latest.snapshot.sourceKey}`);
+      throw new SnapshotUnavailableError(`snapshot not found: ${latest.snapshot.sourceKey}`);
     }
 
     return payload;
@@ -991,6 +1024,17 @@ async function loadSnapshotPayload(env: WorkerEnv, latest: LatestState): Promise
   });
 }
 
+class ServiceUnavailableError extends Error {}
+class SnapshotUnavailableError extends ServiceUnavailableError {}
+
+async function hasSnapshotObjects(bucket: R2BucketLike, latest: LatestState): Promise<boolean> {
+  const [source, index] = await Promise.all([
+    bucket.head(latest.snapshot.sourceKey),
+    bucket.head(latest.snapshot.indexKey)
+  ]);
+  return source !== null && index !== null;
+}
+
 async function ensureLatestState(env: WorkerEnv): Promise<LatestState | null> {
   return readJson<LatestState>(env.GEOSITE_BUCKET, LATEST_STATE_KEY);
 }
@@ -1001,11 +1045,7 @@ async function ensureLatestStateReady(env: WorkerEnv, deps: WorkerDeps): Promise
     return latest;
   }
 
-  try {
-    await ensureGeositeRefresh(env, deps);
-  } catch {
-    return null;
-  }
+  await ensureGeositeRefresh(env, deps);
   return ensureLatestState(env);
 }
 
@@ -1166,7 +1206,7 @@ function artifactName(name: string, filter: string | null): string {
 }
 
 function artifactKey(etag: string, mode: RegexMode, name: string, filter: string | null): string {
-  return `artifacts/${etag}/${mode}/${artifactName(name, filter)}.txt`;
+  return `artifacts/v${CONVERTER_VERSION}/${etag}/${mode}/${artifactName(name, filter)}.txt`;
 }
 
 function snapshotSourceKey(etag: string): string {
@@ -1186,22 +1226,27 @@ function remoteMetaKey(namespace: string, cacheKey: string): string {
 }
 
 async function normalizeRemoteBinaryCacheMeta(
-  input: RemoteBinaryCacheMeta | null,
+  serialized: string | undefined,
   namespace: string,
   cacheKey: string,
   cachedBody: Uint8Array | null,
   fallbackContentType: string
 ): Promise<RemoteBinaryCacheMeta | null> {
+  let input: unknown;
+  try {
+    input = serialized ? JSON.parse(serialized) : null;
+  } catch {
+    input = null;
+  }
   if (
-    input &&
-    typeof input === "object" &&
-    input.version === 1 &&
+    isObjectRecord(input) &&
+    input.version === 2 &&
     typeof input.fetchedAt === "string" &&
     typeof input.responseEtag === "string" &&
     typeof input.contentType === "string"
   ) {
     return {
-      version: 1,
+      version: 2,
       sourceEtag: typeof input.sourceEtag === "string" ? input.sourceEtag : null,
       responseEtag: input.responseEtag,
       fetchedAt: input.fetchedAt,
@@ -1213,8 +1258,10 @@ async function normalizeRemoteBinaryCacheMeta(
     return null;
   }
 
+  // The old sidecar may describe different bytes. Serve only a content-derived
+  // identity and re-fetch unconditionally before promoting this legacy object.
   return {
-    version: 1,
+    version: 2,
     sourceEtag: null,
     responseEtag: await buildRemoteBinaryEtag(namespace, cacheKey, null, cachedBody),
     fetchedAt: new Date(0).toISOString(),
@@ -1298,20 +1345,32 @@ function safeDecodeURIComponent(value: string): string | null {
   }
 }
 
-async function readText(bucket: R2BucketLike, key: string): Promise<string | null> {
-  const object = await bucket.get(key);
-  if (!object) {
-    return null;
+async function getObject(bucket: R2BucketLike, key: string): Promise<R2ObjectBodyLike | null> {
+  try {
+    return await bucket.get(key);
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to read R2 object: ${key}`, { cause: error });
   }
-  return object.text();
+}
+
+async function readText(bucket: R2BucketLike, key: string): Promise<string | null> {
+  try {
+    const object = await getObject(bucket, key);
+    return object ? await object.text() : null;
+  } catch (error) {
+    if (error instanceof ServiceUnavailableError) throw error;
+    throw new ServiceUnavailableError(`failed to read R2 text: ${key}`, { cause: error });
+  }
 }
 
 async function readJson<T>(bucket: R2BucketLike, key: string): Promise<T | null> {
   const content = await readText(bucket, key);
-  if (content === null) {
-    return null;
+  if (content === null) return null;
+  try {
+    return JSON.parse(content) as T;
+  } catch (error) {
+    throw new ServiceUnavailableError(`invalid R2 JSON: ${key}`, { cause: error });
   }
-  return JSON.parse(content) as T;
 }
 
 async function writeText(
@@ -1327,9 +1386,11 @@ async function writeText(
     metadata.cacheControl = options.cacheControl;
   }
 
-  await bucket.put(key, content, {
-    httpMetadata: metadata
-  });
+  try {
+    await bucket.put(key, content, { httpMetadata: metadata });
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to write R2 text: ${key}`, { cause: error });
+  }
 }
 
 async function writeJson(
@@ -1345,26 +1406,29 @@ async function writeJson(
     metadata.cacheControl = options.cacheControl;
   }
 
-  await bucket.put(key, `${JSON.stringify(value)}\n`, {
-    httpMetadata: metadata
-  });
+  try {
+    await bucket.put(key, `${JSON.stringify(value)}\n`, { httpMetadata: metadata });
+  } catch (error) {
+    throw new ServiceUnavailableError(`failed to write R2 JSON: ${key}`, { cause: error });
+  }
 }
 
-async function writeBinary(
+async function writeRemoteBinary(
   bucket: R2BucketLike,
   key: string,
-  value: Uint8Array,
-  options: { contentType: string; cacheControl?: string }
+  body: Uint8Array,
+  meta: RemoteBinaryCacheMeta,
+  expectedEtag: string | null
 ): Promise<void> {
-  const metadata: NonNullable<R2PutOptionsLike["httpMetadata"]> = {
-    contentType: options.contentType
-  };
-  if (options.cacheControl) {
-    metadata.cacheControl = options.cacheControl;
-  }
-
-  await bucket.put(key, value, {
-    httpMetadata: metadata
+  // Bytes and their identity become visible in one R2 write. A delayed 304 or
+  // download must not replace a newer object published by another isolate.
+  await bucket.put(key, body, {
+    httpMetadata: {
+      contentType: meta.contentType,
+      cacheControl: "public, max-age=300, s-maxage=1800, stale-while-revalidate=86400"
+    },
+    customMetadata: { geositeCache: JSON.stringify(meta) },
+    onlyIf: expectedEtag === null ? { etagDoesNotMatch: "*" } : { etagMatches: expectedEtag }
   });
 }
 
@@ -1407,6 +1471,15 @@ function isSameStringArray(left: string[], right: string[]): boolean {
   }
 
   return true;
+}
+
+function logFailure(event: string, error: unknown, fields: Record<string, unknown> = {}): void {
+  console.error(JSON.stringify({
+    event,
+    ...fields,
+    error: error instanceof Error ? error.message : String(error),
+    ...(error instanceof Error && error.cause instanceof Error ? { cause: error.cause.message } : {})
+  }));
 }
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}): Response {
