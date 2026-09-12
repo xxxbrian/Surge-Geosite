@@ -18,6 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Run before normal builds so a missing core/dist cannot be hidden by them.
       - run: pnpm --filter @surge-geosite/worker exec wrangler deploy --dry-run
+      - run: pnpm --filter @surge-geosite/worker cf:types:check
       - run: pnpm check
       - run: pnpm build
       - run: node packages/worker/test/r2-runtime.mjs

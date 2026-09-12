@@ -1509,4 +1509,4 @@ export default {
   scheduled(event: ScheduledEventLike, env: WorkerEnv, ctx: ExecutionContextLike): Promise<void> {
     return worker.scheduled(event, env, ctx);
   }
-};
+} satisfies ExportedHandler<Env>;
