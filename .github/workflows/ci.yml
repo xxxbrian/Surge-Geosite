@@ -20,4 +20,8 @@ jobs:
       - run: pnpm --filter @surge-geosite/worker exec wrangler deploy --dry-run
       - run: pnpm check
       - run: pnpm build
+      - run: node packages/worker/test/r2-runtime.mjs
+      - run: node packages/worker/test/worker-runtime.mjs
+      - run: pnpm --filter @surge-geosite/panel exec playwright install --with-deps chromium
+      - run: pnpm --filter @surge-geosite/panel test:browser
       - run: pnpm --filter @surge-geosite/panel exec wrangler deploy --dry-run

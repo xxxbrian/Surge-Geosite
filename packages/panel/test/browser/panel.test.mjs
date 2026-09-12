@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 
-// Use an existing Playwright installation; the application does not need a browser dependency.
+// PLAYWRIGHT_MODULE can reuse a local tool installation; CI uses the locked devDependency.
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 let browser;
-before(async () => { browser = await chromium.launch({ headless: true }); });
+before(async () => { browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHROMIUM_CHANNEL }); });
 after(async () => { await browser?.close(); });
 
 async function openPanel(t, scenario = 'normal') {
