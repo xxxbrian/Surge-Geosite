@@ -2,7 +2,7 @@
 // Builds the real entrypoint with Wrangler's dry-run, then uses local workerd/R2.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -12,14 +12,13 @@ import { promisify } from "node:util";
 
 const require = createRequire(import.meta.url);
 const wranglerPackage = require.resolve("wrangler/package.json");
-const { Miniflare, createFetchMock } = createRequire(wranglerPackage)("miniflare");
+const { Miniflare, Response: MiniflareResponse } = createRequire(wranglerPackage)("miniflare");
 const run = promisify(execFile);
 const workerDir = fileURLToPath(new URL("..", import.meta.url));
 
 test("bundled Worker handlers initialize, refresh, cache, and conditionally serve rules in workerd", async () => {
   const output = await mkdtemp(path.join(tmpdir(), "geosite-worker-runtime-"));
-  const fetchMock = createFetchMock();
-  fetchMock.disableNetConnect();
+  const upstreamRequests = [];
   let runtime;
 
   try {
@@ -40,27 +39,53 @@ test("bundled Worker handlers initialize, refresh, cache, and conditionally serv
       }
     });
 
-    const upstream = fetchMock.get("https://upstream.test");
     for (const version of ["v1", "v2"]) {
       const yaml = `lists:\n  - name: demo\n    length: 1\n    rules:\n      - "domain:${version}.example:@cn"\n`;
-      upstream.intercept({ method: "HEAD", path: "/dlc.yml" }).reply(200, "", { headers: { etag: `"runtime-${version}"` } });
-      upstream.intercept({ method: "GET", path: "/dlc.yml" }).reply(200, yaml, { headers: { etag: `"runtime-${version}"` } });
+      const headers = { etag: `"runtime-${version}"` };
+      upstreamRequests.push({ method: "HEAD", path: "/dlc.yml", body: null, headers });
+      upstreamRequests.push({ method: "GET", path: "/dlc.yml", body: yaml, headers });
     }
-    upstream.intercept({ method: "GET", path: "/srs/geosite-demo.srs" })
-      .reply(200, "runtime-srs", { headers: { etag: '"srs-v1"', "content-type": "application/octet-stream" } });
+    upstreamRequests.push({
+      method: "GET", path: "/srs/geosite-demo.srs", body: "runtime-srs",
+      headers: { etag: '"srs-v1"', "content-type": "application/octet-stream" }
+    });
 
     runtime = new Miniflare({
-      modules: true,
-      scriptPath: path.join(output, "index.js"),
-      modulesRoot: output,
-      compatibilityDate: "2026-02-15",
-      compatibilityFlags: ["nodejs_compat"],
-      r2Buckets: ["GEOSITE_BUCKET"],
-      bindings: {
-        UPSTREAM_YAML_URL: "https://upstream.test/dlc.yml",
-        SRS_UPSTREAM_BASE_URL: "https://upstream.test/srs"
-      },
-      fetchMock
+      telemetry: { enabled: false },
+      workers: [{
+        config: {
+          name: "worker-runtime",
+          type: "worker",
+          compatibilityDate: "2026-02-15",
+          compatibilityFlags: ["nodejs_compat"],
+          manifest: {
+            mainModule: "index.js",
+            modulesRoot: output,
+            modules: { "index.js": { type: "esm", contents: await readFile(path.join(output, "index.js"), "utf8") } }
+          },
+          env: {
+            GEOSITE_BUCKET: { type: "r2", name: "runtime-test-bucket" },
+            UPSTREAM_YAML_URL: { type: "text", value: "https://upstream.test/dlc.yml" },
+            SRS_UPSTREAM_BASE_URL: { type: "text", value: "https://upstream.test/srs" }
+          }
+        },
+        dev: {
+          // Every outbound request is handled locally; unexpected requests fail
+          // assertions instead of falling through to the real network.
+          outboundService: {
+            type: "fetcher",
+            handler(request) {
+              const expected = upstreamRequests.shift();
+              const url = new URL(request.url);
+              assert.ok(expected, `unexpected upstream request: ${request.method} ${request.url}`);
+              assert.equal(url.origin, "https://upstream.test");
+              assert.equal(request.method, expected.method);
+              assert.equal(url.pathname, expected.path);
+              return new MiniflareResponse(expected.body, { status: 200, headers: expected.headers });
+            }
+          }
+        }
+      }]
     });
 
     const index = await runtime.dispatchFetch("https://worker.test/geosite");
@@ -103,10 +128,9 @@ test("bundled Worker handlers initialize, refresh, cache, and conditionally serv
     })).status, 304);
     const binaryObject = await bucket.get("remote-cache/geosite-srs/blob/geosite-demo.srs");
     assert.equal(JSON.parse(binaryObject.customMetadata.geositeCache).version, 2);
-    fetchMock.assertNoPendingInterceptors();
+    assert.equal(upstreamRequests.length, 0, "all expected upstream requests were made");
   } finally {
     await runtime?.dispose();
-    await fetchMock.close();
     await rm(output, { recursive: true, force: true });
   }
 });

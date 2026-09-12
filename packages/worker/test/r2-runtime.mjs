@@ -10,10 +10,19 @@ const { Miniflare } = wranglerRequire("miniflare");
 
 test("R2 enforces publication preconditions and returns matching binary bytes and metadata", async () => {
   const runtime = new Miniflare({
-    modules: true,
-    script: 'export default { fetch() { return new Response("local R2 contract"); } };',
-    compatibilityDate: "2026-02-15",
-    r2Buckets: ["GEOSITE_BUCKET"]
+    telemetry: { enabled: false },
+    workers: [{
+      config: {
+        name: "r2-contract",
+        type: "worker",
+        compatibilityDate: "2026-02-15",
+        manifest: {
+          mainModule: "index.js",
+          modules: { "index.js": { type: "esm", contents: 'export default { fetch() { return new Response("local R2 contract"); } };' } }
+        },
+        env: { GEOSITE_BUCKET: { type: "r2", name: "runtime-test-bucket" } }
+      }
+    }]
   });
 
   try {
