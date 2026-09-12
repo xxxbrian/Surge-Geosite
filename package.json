@@ -20,9 +20,9 @@
     "test:scripts": "node --test scripts/test/*.test.mjs"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.6",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.11"
   },
   "engines": {
     "node": ">=24.0.0"
